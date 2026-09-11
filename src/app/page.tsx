@@ -1,8 +1,11 @@
+import Link from "next/link";
 import { asc, desc, ne } from "drizzle-orm";
-import { Archive, CalendarDays, Check, Circle, Plus } from "lucide-react";
-import { archiveTodo, createTodo, toggleTodo } from "./actions";
+import { Archive, CalendarDays } from "lucide-react";
 import { db, isDatabaseConfigured } from "@/db";
 import { todos, type Todo } from "@/db/schema";
+import { TodoForm } from "./todo-form";
+import { TodoEditForm } from "./todo-edit-form";
+import { TodoArchiveForm, TodoToggleForm } from "./todo-item-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -41,14 +44,23 @@ export default async function Home() {
               오늘 할 일
             </h1>
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm sm:flex">
-            <div className="border border-neutral-200 bg-white px-4 py-3">
-              <p className="text-neutral-500">Active</p>
-              <p className="mt-1 text-2xl font-semibold">{activeCount}</p>
-            </div>
-            <div className="border border-neutral-200 bg-white px-4 py-3">
-              <p className="text-neutral-500">Done</p>
-              <p className="mt-1 text-2xl font-semibold">{completedCount}</p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <Link
+              href="/archive"
+              className="inline-flex h-11 items-center justify-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm text-neutral-700 hover:border-neutral-950 hover:text-neutral-950"
+            >
+              <Archive size={16} aria-hidden="true" />
+              보관함
+            </Link>
+            <div className="grid grid-cols-2 gap-3 text-sm sm:flex">
+              <div className="border border-neutral-200 bg-white px-4 py-3">
+                <p className="text-neutral-500">Active</p>
+                <p className="mt-1 text-2xl font-semibold">{activeCount}</p>
+              </div>
+              <div className="border border-neutral-200 bg-white px-4 py-3">
+                <p className="text-neutral-500">Done</p>
+                <p className="mt-1 text-2xl font-semibold">{completedCount}</p>
+              </div>
             </div>
           </div>
         </header>
@@ -63,71 +75,7 @@ export default async function Home() {
         ) : null}
 
         <section className="grid gap-6 lg:grid-cols-[360px_1fr]">
-          <form
-            action={createTodo}
-            className="flex flex-col gap-4 border border-neutral-200 bg-white p-5"
-          >
-            <div>
-              <label htmlFor="title" className="text-sm font-medium">
-                새 todo
-              </label>
-              <input
-                id="title"
-                name="title"
-                required
-                placeholder="해야 할 일을 입력"
-                className="mt-2 h-11 w-full border border-neutral-300 px-3 text-sm outline-none focus:border-emerald-700"
-              />
-            </div>
-            <div>
-              <label htmlFor="notes" className="text-sm font-medium">
-                메모
-              </label>
-              <textarea
-                id="notes"
-                name="notes"
-                rows={4}
-                placeholder="상세 내용"
-                className="mt-2 w-full resize-none border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-emerald-700"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="dueDate" className="text-sm font-medium">
-                  마감일
-                </label>
-                <input
-                  id="dueDate"
-                  name="dueDate"
-                  type="date"
-                  className="mt-2 h-11 w-full border border-neutral-300 px-3 text-sm outline-none focus:border-emerald-700"
-                />
-              </div>
-              <div>
-                <label htmlFor="priority" className="text-sm font-medium">
-                  우선순위
-                </label>
-                <select
-                  id="priority"
-                  name="priority"
-                  defaultValue="2"
-                  className="mt-2 h-11 w-full border border-neutral-300 px-3 text-sm outline-none focus:border-emerald-700"
-                >
-                  <option value="1">High</option>
-                  <option value="2">Normal</option>
-                  <option value="3">Low</option>
-                </select>
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={!configured}
-              className="inline-flex h-11 items-center justify-center gap-2 bg-neutral-950 px-4 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-neutral-300"
-            >
-              <Plus size={17} aria-hidden="true" />
-              추가
-            </button>
-          </form>
+          <TodoForm configured={configured} />
 
           <div className="flex flex-col border border-neutral-200 bg-white">
             {items.length === 0 ? (
@@ -142,29 +90,10 @@ export default async function Home() {
                 >
                   <div className="min-w-0">
                     <div className="flex items-start gap-3">
-                      <form
-                        action={toggleTodo.bind(
-                          null,
-                          todo.id,
-                          todo.status === "completed" ? "active" : "completed",
-                        )}
-                      >
-                        <button
-                          type="submit"
-                          title={
-                            todo.status === "completed"
-                              ? "미완료로 변경"
-                              : "완료로 변경"
-                          }
-                          className="mt-0.5 inline-flex size-6 items-center justify-center border border-neutral-300 text-emerald-700"
-                        >
-                          {todo.status === "completed" ? (
-                            <Check size={15} aria-hidden="true" />
-                          ) : (
-                            <Circle size={14} aria-hidden="true" />
-                          )}
-                        </button>
-                      </form>
+                      <TodoToggleForm
+                        id={todo.id}
+                        completed={todo.status === "completed"}
+                      />
                       <div className="min-w-0">
                         <h2
                           className={`break-words text-base font-medium ${
@@ -193,16 +122,17 @@ export default async function Home() {
                         {todo.dueDate}
                       </span>
                     ) : null}
-                    <form action={archiveTodo.bind(null, todo.id)}>
-                      <button
-                        type="submit"
-                        title="보관"
-                        className="inline-flex size-8 items-center justify-center border border-neutral-200 text-neutral-500 hover:text-neutral-950"
-                      >
-                        <Archive size={15} aria-hidden="true" />
-                      </button>
-                    </form>
+                    <TodoArchiveForm id={todo.id} />
                   </div>
+                  <TodoEditForm
+                    todo={{
+                      id: todo.id,
+                      title: todo.title,
+                      notes: todo.notes,
+                      dueDate: todo.dueDate,
+                      priority: todo.priority,
+                    }}
+                  />
                 </article>
               ))
             )}
