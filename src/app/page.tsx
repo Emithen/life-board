@@ -1,115 +1,71 @@
 import Link from "next/link";
-import { Archive } from "lucide-react";
-import { listCurrentTodos } from "@/features/todos/repository";
-import { TodoForm } from "./todo-form";
-import { TodoEditForm } from "./todo-edit-form";
-import { TodoArchiveForm, TodoToggleForm } from "./todo-item-actions";
-import { TodoMetadata } from "./todo-metadata";
+import { Archive, FileText, LibraryBig } from "lucide-react";
+import { listTopics } from "@/features/content/repository";
+import { TopicForm } from "./topic-form";
+import { TopicArchiveForm, TopicEditForm } from "./topic-controls";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
-  const { configured, items } = await listCurrentTodos();
-  const activeCount = items.filter((todo) => todo.status === "active").length;
-  const completedCount = items.filter((todo) => todo.status === "completed").length;
+const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+});
+
+export default async function TopicsPage() {
+  const { configured, items } = await listTopics();
 
   return (
     <main className="min-h-screen bg-[#f7f7f4] px-5 py-6 text-neutral-950 sm:px-8 lg:px-12">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-        <header className="flex flex-col gap-5 border-b border-neutral-200 pb-6 md:flex-row md:items-end md:justify-between">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+        <header className="flex flex-col gap-5 border-b border-neutral-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-emerald-700">Lifeboard</p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-normal sm:text-4xl">
-              오늘 할 일
-            </h1>
+            <p className="text-sm font-medium text-emerald-700">Knowledge workspace</p>
+            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">관심 주제</h1>
+            <p className="mt-2 text-sm text-neutral-500">지금 배우고 생각하는 것들을 주제별로 모아보세요.</p>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <Link
-              href="/archive"
-              className="inline-flex h-11 items-center justify-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm text-neutral-700 hover:border-neutral-950 hover:text-neutral-950"
-            >
-              <Archive size={16} aria-hidden="true" />
-              보관함
-            </Link>
-            <div className="grid grid-cols-2 gap-3 text-sm sm:flex">
-              <div className="border border-neutral-200 bg-white px-4 py-3">
-                <p className="text-neutral-500">Active</p>
-                <p className="mt-1 text-2xl font-semibold">{activeCount}</p>
-              </div>
-              <div className="border border-neutral-200 bg-white px-4 py-3">
-                <p className="text-neutral-500">Done</p>
-                <p className="mt-1 text-2xl font-semibold">{completedCount}</p>
-              </div>
-            </div>
-          </div>
+          <Link href="/topics/archive" className="inline-flex h-10 items-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm text-neutral-700 hover:border-neutral-950 hover:text-neutral-950">
+            <Archive size={16} aria-hidden="true" /> 주제 보관함
+          </Link>
         </header>
 
         {!configured ? (
           <section className="border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <strong>DB 연결 대기 중.</strong> Neon 연결 문자열을{" "}
-            <code className="font-mono">.env.local</code>의{" "}
-            <code className="font-mono">DATABASE_URL</code>에 넣고 migration을
-            실행하면 todo 저장이 활성화됩니다.
+            <strong>DB 연결 대기 중.</strong> 마이그레이션을 적용하면 주제와 문서 저장이 활성화됩니다.
           </section>
         ) : null}
 
-        <section className="grid gap-6 lg:grid-cols-[360px_1fr]">
-          <TodoForm configured={configured} />
-
-          <div className="flex flex-col border border-neutral-200 bg-white">
+        <section className="grid items-start gap-6 lg:grid-cols-[340px_1fr]">
+          <TopicForm configured={configured} />
+          <div>
             {items.length === 0 ? (
-              <div className="flex min-h-64 items-center justify-center px-5 py-12 text-center text-sm text-neutral-500">
-                아직 todo가 없습니다.
+              <div className="flex min-h-72 flex-col items-center justify-center border border-neutral-200 bg-white px-5 text-center text-neutral-500">
+                <LibraryBig size={28} aria-hidden="true" />
+                <p className="mt-3 text-sm">아직 주제가 없습니다. 첫 관심사를 등록해 보세요.</p>
               </div>
             ) : (
-              items.map((todo) => (
-                <article
-                  key={todo.id}
-                  className="grid gap-4 border-b border-neutral-100 p-5 last:border-b-0 sm:grid-cols-[1fr_auto]"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-start gap-3">
-                      <TodoToggleForm
-                        id={todo.id}
-                        completed={todo.status === "completed"}
-                      />
-                      <div className="min-w-0">
-                        <h2
-                          className={`break-words text-base font-medium ${
-                            todo.status === "completed"
-                              ? "text-neutral-400 line-through"
-                              : "text-neutral-950"
-                          }`}
-                        >
-                          {todo.title}
-                        </h2>
-                        {todo.notes ? (
-                          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-neutral-600">
-                            {todo.notes}
-                          </p>
-                        ) : null}
-                      </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {items.map((topic) => (
+                  <article key={topic.id} className="border border-neutral-200 bg-white p-5">
+                    <div className="h-1.5 w-12" style={{ backgroundColor: topic.color }} />
+                    <Link href={`/topics/${topic.id}`} className="group mt-4 block">
+                      <h2 className="text-xl font-semibold group-hover:text-emerald-700">{topic.name}</h2>
+                      <p className="mt-2 min-h-10 text-sm leading-5 text-neutral-600">{topic.description ?? "설명이 없습니다."}</p>
+                    </Link>
+                    <div className="mt-5 flex items-center justify-between border-t border-neutral-100 pt-4 text-xs text-neutral-500">
+                      <span className="inline-flex items-center gap-1"><FileText size={14} /> 문서 {topic.documentCount}개</span>
+                      <span>{dateFormatter.format(topic.updatedAt)} 활동</span>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <TodoMetadata
-                      priority={todo.priority}
-                      dueDate={todo.dueDate}
-                    />
-                    <TodoArchiveForm id={todo.id} />
-                  </div>
-                  <TodoEditForm
-                    key={todo.updatedAt.toISOString()}
-                    todo={{
-                      id: todo.id,
-                      title: todo.title,
-                      notes: todo.notes,
-                      dueDate: todo.dueDate,
-                      priority: todo.priority,
-                    }}
-                  />
-                </article>
-              ))
+                    <p className="mt-2 truncate text-xs text-neutral-500">
+                      {topic.latestDocument ? `최근: ${topic.latestDocument.title}` : "아직 작성한 문서가 없습니다."}
+                    </p>
+                    <div className="mt-4 flex items-start justify-between gap-2">
+                      <TopicEditForm key={topic.updatedAt.toISOString()} topic={topic} />
+                      <TopicArchiveForm id={topic.id} />
+                    </div>
+                  </article>
+                ))}
+              </div>
             )}
           </div>
         </section>

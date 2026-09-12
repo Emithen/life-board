@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Archive, ChevronLeft } from "lucide-react";
 import { listArchivedTodos } from "@/features/todos/repository";
-import { TodoRestoreForm } from "../todo-item-actions";
-import { TodoMetadata } from "../todo-metadata";
+import { TodoRestoreForm } from "../../todo-item-actions";
+import { TodoMetadata } from "../../todo-metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,7 @@ export default async function ArchivePage() {
             </p>
           </div>
           <Link
-            href="/"
+            href="/todos"
             className="inline-flex h-10 items-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm text-neutral-700 hover:border-neutral-950 hover:text-neutral-950"
           >
             <ChevronLeft size={16} aria-hidden="true" />

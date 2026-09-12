@@ -15,6 +15,13 @@
       "when": 1789220528973,
       "tag": "0001_rich_secret_warriors",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789230600854,
+      "tag": "0002_amusing_energizer",
+      "breakpoints": true
     }
   ]
 }

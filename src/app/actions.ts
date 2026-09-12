@@ -80,7 +80,7 @@ export async function createTodo(
 
   try {
     await insertTodo(parsed.data);
-    revalidatePath("/");
+    revalidatePath("/todos");
     return { status: "success", message: "Todo를 추가했습니다." };
   } catch (error) {
     console.error("Todo creation failed", error);
@@ -114,7 +114,7 @@ export async function updateTodo(
       notFound: "수정할 수 있는 Todo를 찾을 수 없습니다.",
       failure: "Todo를 수정하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     },
-    paths: ["/"],
+    paths: ["/todos"],
   });
 }
 
@@ -143,7 +143,7 @@ export async function toggleTodo(
       notFound: "상태를 변경할 수 있는 Todo를 찾을 수 없습니다.",
       failure: "상태를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     },
-    paths: ["/"],
+    paths: ["/todos"],
   });
 }
 
@@ -166,7 +166,7 @@ export async function archiveTodo(
       notFound: "보관할 수 있는 Todo를 찾을 수 없습니다.",
       failure: "Todo를 보관하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     },
-    paths: ["/", "/archive"],
+    paths: ["/todos", "/todos/archive"],
   });
 }
 
@@ -189,6 +189,6 @@ export async function restoreTodo(
       notFound: "복원할 수 있는 Todo를 찾을 수 없습니다.",
       failure: "Todo를 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     },
-    paths: ["/", "/archive"],
+    paths: ["/todos", "/todos/archive"],
   });
 }

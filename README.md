@@ -1,9 +1,12 @@
 # Lifeboard
 
-개인 일정과 할 일을 한곳에서 관리하기 위한 개인용 생산성 웹앱입니다. 현재는 Todo 관리에 집중한 초기 MVP 단계이며, 이후 일정, 반복 작업, 습관, 메모와 지식 기록 기능으로 확장할 예정입니다.
+관심 주제별 문서와 할 일을 한곳에서 관리하기 위한 개인용 생산성 웹앱입니다. 주제별로 짧은 문서를 빠르게 기록하고, 별도 Todo 화면에서 할 일을 관리할 수 있습니다.
 
 ## 현재 기능
 
+- 관심 주제 생성·수정·보관·복원
+- 주제별 문서 생성·수정·보관·복원
+- 주제 카드의 문서 수, 최근 문서, 마지막 활동일 표시
 - Todo 생성 및 목록 조회
 - Todo 제목·메모·마감일·우선순위 수정
 - 완료·미완료 상태 전환
@@ -80,11 +83,14 @@ src/
   app/
     actions.ts      # Todo Server Actions
     layout.tsx      # 루트 레이아웃
-    page.tsx        # 메인 Todo 화면
+    page.tsx        # 주제 대시보드
+    topics/         # 주제 상세 및 주제·문서 보관함
+    todos/          # Todo 화면과 보관함
   db/
     index.ts        # Neon/Drizzle 연결
     schema.ts       # Todo 데이터 모델
   features/
+    content/        # 주제·문서 도메인, 검증, 데이터 접근
     todos/
       model.ts       # Todo 도메인 타입과 상수
       repository.ts  # 서버 전용 데이터 접근 계층
@@ -96,7 +102,7 @@ docs/
 
 ## 현재 범위와 다음 단계
 
-현재 구현은 단일 사용자용 Todo MVP입니다. 인증과 CI는 아직 포함되어 있지 않습니다. 장기 방향과 확장 후보는 [`docs/initial-architecture.md`](docs/initial-architecture.md)에서 확인할 수 있습니다.
+현재 구현은 단일 사용자용 지식·Todo MVP입니다. 인증, 문서 관계 그래프와 CI는 아직 포함되어 있지 않습니다. 주제·문서 MVP의 결정 사항은 [`docs/topics-mvp.md`](docs/topics-mvp.md), 장기 방향은 [`docs/initial-architecture.md`](docs/initial-architecture.md)에서 확인할 수 있습니다.
 
 ## 배포
 
