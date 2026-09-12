@@ -2,15 +2,12 @@
 
 import { useActionState, useState } from "react";
 import { LoaderCircle, Pencil, X } from "lucide-react";
-import { updateTodo, type TodoActionState } from "./actions";
-
-type EditableTodo = {
-  id: string;
-  title: string;
-  notes: string | null;
-  dueDate: string | null;
-  priority: number;
-};
+import { updateTodo } from "./actions";
+import { TodoFields } from "./todo-fields";
+import type {
+  EditableTodo,
+  TodoActionState,
+} from "@/features/todos/model";
 
 const initialState: TodoActionState = {
   status: "idle",
@@ -45,95 +42,23 @@ export function TodoEditForm({ todo }: { todo: EditableTodo }) {
     );
   }
 
-  const fieldId = (name: string) => `${name}-${todo.id}`;
-
   return (
     <form
       action={formAction}
       aria-busy={pending}
-      className="grid gap-4 border-t border-neutral-100 pt-4 sm:col-span-2 sm:grid-cols-2"
+      className="grid gap-4 border-t border-neutral-100 pt-4 sm:col-span-2"
     >
-      <div className="sm:col-span-2">
-        <label htmlFor={fieldId("edit-title")} className="text-sm font-medium">
-          할 일
-        </label>
-        <input
-          id={fieldId("edit-title")}
-          name="title"
-          required
-          maxLength={120}
-          defaultValue={todo.title}
-          aria-invalid={Boolean(state.fieldErrors?.title)}
-          className="mt-2 h-10 w-full border border-neutral-300 px-3 text-sm outline-none focus:border-emerald-700 aria-invalid:border-red-500"
-        />
-        {state.fieldErrors?.title ? (
-          <p className="mt-1 text-xs text-red-700">{state.fieldErrors.title}</p>
-        ) : null}
-      </div>
-
-      <div className="sm:col-span-2">
-        <label htmlFor={fieldId("edit-notes")} className="text-sm font-medium">
-          메모
-        </label>
-        <textarea
-          id={fieldId("edit-notes")}
-          name="notes"
-          rows={3}
-          maxLength={2000}
-          defaultValue={todo.notes ?? ""}
-          aria-invalid={Boolean(state.fieldErrors?.notes)}
-          className="mt-2 w-full resize-none border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-emerald-700 aria-invalid:border-red-500"
-        />
-        {state.fieldErrors?.notes ? (
-          <p className="mt-1 text-xs text-red-700">{state.fieldErrors.notes}</p>
-        ) : null}
-      </div>
-
-      <div>
-        <label htmlFor={fieldId("edit-due-date")} className="text-sm font-medium">
-          마감일
-        </label>
-        <input
-          id={fieldId("edit-due-date")}
-          name="dueDate"
-          type="date"
-          defaultValue={todo.dueDate ?? ""}
-          aria-invalid={Boolean(state.fieldErrors?.dueDate)}
-          className="mt-2 h-10 w-full border border-neutral-300 px-3 text-sm outline-none focus:border-emerald-700 aria-invalid:border-red-500"
-        />
-        {state.fieldErrors?.dueDate ? (
-          <p className="mt-1 text-xs text-red-700">
-            {state.fieldErrors.dueDate}
-          </p>
-        ) : null}
-      </div>
-
-      <div>
-        <label htmlFor={fieldId("edit-priority")} className="text-sm font-medium">
-          우선순위
-        </label>
-        <select
-          id={fieldId("edit-priority")}
-          name="priority"
-          defaultValue={String(todo.priority)}
-          aria-invalid={Boolean(state.fieldErrors?.priority)}
-          className="mt-2 h-10 w-full border border-neutral-300 px-3 text-sm outline-none focus:border-emerald-700 aria-invalid:border-red-500"
-        >
-          <option value="1">High</option>
-          <option value="2">Normal</option>
-          <option value="3">Low</option>
-        </select>
-        {state.fieldErrors?.priority ? (
-          <p className="mt-1 text-xs text-red-700">
-            {state.fieldErrors.priority}
-          </p>
-        ) : null}
-      </div>
+      <TodoFields
+        idPrefix={`edit-todo-${todo.id}`}
+        errors={state.fieldErrors}
+        values={todo}
+        compact
+      />
 
       {state.message ? (
         <p
           aria-live="polite"
-          className={`text-sm sm:col-span-2 ${
+          className={`text-sm ${
             state.status === "error" ? "text-red-700" : "text-emerald-700"
           }`}
         >
@@ -141,7 +66,7 @@ export function TodoEditForm({ todo }: { todo: EditableTodo }) {
         </p>
       ) : null}
 
-      <div className="flex justify-end gap-2 sm:col-span-2">
+      <div className="flex justify-end gap-2">
         <button
           type="button"
           disabled={pending}

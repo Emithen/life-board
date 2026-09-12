@@ -68,6 +68,7 @@ pnpm dev
 | `pnpm build` | 프로덕션 빌드 |
 | `pnpm start` | 빌드된 앱 실행 |
 | `pnpm lint` | ESLint 검사 |
+| `pnpm test` | Todo 입력 검증 단위 테스트 |
 | `pnpm db:generate` | 스키마 변경으로부터 마이그레이션 생성 |
 | `pnpm db:migrate` | 데이터베이스에 마이그레이션 적용 |
 | `pnpm db:studio` | Drizzle Studio 실행 |
@@ -83,6 +84,11 @@ src/
   db/
     index.ts        # Neon/Drizzle 연결
     schema.ts       # Todo 데이터 모델
+  features/
+    todos/
+      model.ts       # Todo 도메인 타입과 상수
+      repository.ts  # 서버 전용 데이터 접근 계층
+      validation.ts  # 입력 파싱과 검증
 drizzle/            # SQL 마이그레이션과 메타데이터
 docs/
   initial-architecture.md
@@ -90,7 +96,7 @@ docs/
 
 ## 현재 범위와 다음 단계
 
-현재 구현은 단일 사용자용 Todo MVP입니다. 인증, Todo 수정, 보관함과 복원, 자동 테스트 및 CI는 아직 포함되어 있지 않습니다. 장기 방향과 확장 후보는 [`docs/initial-architecture.md`](docs/initial-architecture.md)에서 확인할 수 있습니다.
+현재 구현은 단일 사용자용 Todo MVP입니다. 인증과 CI는 아직 포함되어 있지 않습니다. 장기 방향과 확장 후보는 [`docs/initial-architecture.md`](docs/initial-architecture.md)에서 확인할 수 있습니다.
 
 ## 배포
 

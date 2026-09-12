@@ -1,36 +1,15 @@
 import Link from "next/link";
-import { asc, desc, ne } from "drizzle-orm";
-import { Archive, CalendarDays } from "lucide-react";
-import { db, isDatabaseConfigured } from "@/db";
-import { todos, type Todo } from "@/db/schema";
+import { Archive } from "lucide-react";
+import { listCurrentTodos } from "@/features/todos/repository";
 import { TodoForm } from "./todo-form";
 import { TodoEditForm } from "./todo-edit-form";
 import { TodoArchiveForm, TodoToggleForm } from "./todo-item-actions";
+import { TodoMetadata } from "./todo-metadata";
 
 export const dynamic = "force-dynamic";
 
-async function getTodos() {
-  if (!isDatabaseConfigured()) {
-    return { configured: false, items: [] as Todo[] };
-  }
-
-  const items = await db()
-    .select()
-    .from(todos)
-    .where(ne(todos.status, "archived"))
-    .orderBy(asc(todos.status), asc(todos.dueDate), desc(todos.createdAt));
-
-  return { configured: true, items };
-}
-
-function priorityLabel(priority: number) {
-  if (priority === 1) return "High";
-  if (priority === 3) return "Low";
-  return "Normal";
-}
-
 export default async function Home() {
-  const { configured, items } = await getTodos();
+  const { configured, items } = await listCurrentTodos();
   const activeCount = items.filter((todo) => todo.status === "active").length;
   const completedCount = items.filter((todo) => todo.status === "completed").length;
 
@@ -113,18 +92,14 @@ export default async function Home() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <span className="border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600">
-                      {priorityLabel(todo.priority)}
-                    </span>
-                    {todo.dueDate ? (
-                      <span className="inline-flex items-center gap-1 border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600">
-                        <CalendarDays size={13} aria-hidden="true" />
-                        {todo.dueDate}
-                      </span>
-                    ) : null}
+                    <TodoMetadata
+                      priority={todo.priority}
+                      dueDate={todo.dueDate}
+                    />
                     <TodoArchiveForm id={todo.id} />
                   </div>
                   <TodoEditForm
+                    key={todo.updatedAt.toISOString()}
                     todo={{
                       id: todo.id,
                       title: todo.title,

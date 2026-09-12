@@ -1,34 +1,13 @@
 import Link from "next/link";
-import { desc, eq } from "drizzle-orm";
-import { Archive, CalendarDays, ChevronLeft } from "lucide-react";
-import { db, isDatabaseConfigured } from "@/db";
-import { todos, type Todo } from "@/db/schema";
+import { Archive, ChevronLeft } from "lucide-react";
+import { listArchivedTodos } from "@/features/todos/repository";
 import { TodoRestoreForm } from "../todo-item-actions";
+import { TodoMetadata } from "../todo-metadata";
 
 export const dynamic = "force-dynamic";
 
-async function getArchivedTodos() {
-  if (!isDatabaseConfigured()) {
-    return { configured: false, items: [] as Todo[] };
-  }
-
-  const items = await db()
-    .select()
-    .from(todos)
-    .where(eq(todos.status, "archived"))
-    .orderBy(desc(todos.updatedAt));
-
-  return { configured: true, items };
-}
-
-function priorityLabel(priority: number) {
-  if (priority === 1) return "High";
-  if (priority === 3) return "Low";
-  return "Normal";
-}
-
 export default async function ArchivePage() {
-  const { configured, items } = await getArchivedTodos();
+  const { configured, items } = await listArchivedTodos();
 
   return (
     <main className="min-h-screen bg-[#f7f7f4] px-5 py-6 text-neutral-950 sm:px-8 lg:px-12">
@@ -81,15 +60,10 @@ export default async function ArchivePage() {
                     </p>
                   ) : null}
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600">
-                      {priorityLabel(todo.priority)}
-                    </span>
-                    {todo.dueDate ? (
-                      <span className="inline-flex items-center gap-1 border border-neutral-200 px-2.5 py-1 text-xs text-neutral-600">
-                        <CalendarDays size={13} aria-hidden="true" />
-                        {todo.dueDate}
-                      </span>
-                    ) : null}
+                    <TodoMetadata
+                      priority={todo.priority}
+                      dueDate={todo.dueDate}
+                    />
                   </div>
                 </div>
                 <div className="flex items-start sm:justify-end">

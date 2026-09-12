@@ -1,0 +1,3 @@
+ALTER TABLE "todos" ADD CONSTRAINT "todos_title_length_check" CHECK (char_length("todos"."title") between 1 and 120);--> statement-breakpoint
+ALTER TABLE "todos" ADD CONSTRAINT "todos_notes_length_check" CHECK ("todos"."notes" is null or char_length("todos"."notes") <= 2000);--> statement-breakpoint
+ALTER TABLE "todos" ADD CONSTRAINT "todos_priority_check" CHECK ("todos"."priority" between 1 and 3);
