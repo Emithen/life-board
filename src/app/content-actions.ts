@@ -67,6 +67,7 @@ export async function createTopic(
   try {
     await insertTopic(parsed.data);
     revalidatePath("/");
+    revalidatePath("/topics/manage");
     return { status: "success", message: "주제를 추가했습니다." };
   } catch (error) {
     console.error("Topic creation failed", error);
@@ -94,7 +95,7 @@ export async function updateTopic(
     successMessage: "주제를 수정했습니다.",
     notFoundMessage: "수정할 수 있는 주제를 찾을 수 없습니다.",
     failureMessage: "주제를 수정하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-    paths: ["/", `/topics/${id}`],
+    paths: ["/", "/topics/manage", `/topics/manage/${id}`, `/topics/${id}`],
   });
 }
 
@@ -111,7 +112,7 @@ export async function archiveTopic(
     successMessage: "주제를 보관했습니다.",
     notFoundMessage: "보관할 수 있는 주제를 찾을 수 없습니다.",
     failureMessage: "주제를 보관하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-    paths: ["/", "/topics/archive", `/topics/${id}`],
+    paths: ["/", "/topics/manage", "/topics/archive", `/topics/manage/${id}`, `/topics/${id}`],
   });
 }
 
@@ -128,7 +129,7 @@ export async function restoreTopic(
     successMessage: "주제를 복원했습니다.",
     notFoundMessage: "복원할 수 있는 주제를 찾을 수 없습니다.",
     failureMessage: "주제를 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-    paths: ["/", "/topics/archive", `/topics/${id}`],
+    paths: ["/", "/topics/manage", "/topics/archive", `/topics/manage/${id}`, `/topics/${id}`],
   });
 }
 
@@ -152,7 +153,7 @@ export async function createDocument(
     successMessage: "문서를 추가했습니다.",
     notFoundMessage: "문서를 추가할 수 있는 주제를 찾을 수 없습니다.",
     failureMessage: "문서를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-    paths: ["/", `/topics/${topicId}`],
+    paths: ["/", `/topics/manage/${topicId}`, `/topics/${topicId}`],
   });
 }
 
@@ -179,7 +180,7 @@ export async function updateDocument(
     successMessage: "문서를 수정했습니다.",
     notFoundMessage: "수정할 수 있는 문서를 찾을 수 없습니다.",
     failureMessage: "문서를 수정하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-    paths: ["/", `/topics/${topicId}`],
+    paths: ["/", `/topics/manage/${topicId}`, `/topics/${topicId}`, `/documents/${id}`],
   });
 }
 
@@ -200,7 +201,7 @@ async function changeDocumentArchiveState(
     failureMessage: archived
       ? "문서를 보관하지 못했습니다. 잠시 후 다시 시도해 주세요."
       : "문서를 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-    paths: ["/", `/topics/${topicId}`, `/topics/${topicId}/archive`],
+    paths: ["/", `/topics/manage/${topicId}`, `/topics/${topicId}`, `/topics/${topicId}/archive`, `/documents/${id}`],
   });
 }
 

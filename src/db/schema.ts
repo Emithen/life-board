@@ -7,7 +7,9 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import {
@@ -96,10 +98,12 @@ export const documents = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     topicId: uuid("topic_id")
-      .notNull()
       .references(() => topics.id),
+    parentId: uuid("parent_id").references((): AnyPgColumn => documents.id),
+    legacyTopicId: uuid("legacy_topic_id").references(() => topics.id),
     title: text("title").notNull(),
     content: text("content"),
+    accentColor: text("accent_color"),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -117,8 +121,38 @@ export const documents = pgTable(
       "documents_content_length_check",
       sql`${table.content} is null or char_length(${table.content}) <= ${sql.raw(String(DOCUMENT_CONTENT_MAX_LENGTH))}`,
     ),
+    check("documents_parent_not_self_check", sql`${table.parentId} is null or ${table.parentId} <> ${table.id}`),
+    check("documents_accent_color_format_check", sql`${table.accentColor} is null or ${table.accentColor} ~ '^#[0-9a-fA-F]{6}$'`),
     index("documents_topic_id_idx").on(table.topicId),
+    index("documents_parent_id_idx").on(table.parentId),
     index("documents_archived_at_idx").on(table.archivedAt),
+    uniqueIndex("documents_legacy_topic_id_uq").on(table.legacyTopicId),
+  ],
+);
+
+export const documentReferences = pgTable(
+  "document_references",
+  {
+    sourceDocumentId: uuid("source_document_id")
+      .notNull()
+      .references(() => documents.id),
+    targetDocumentId: uuid("target_document_id")
+      .notNull()
+      .references(() => documents.id),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("document_references_source_target_uq").on(
+      table.sourceDocumentId,
+      table.targetDocumentId,
+    ),
+    index("document_references_target_id_idx").on(table.targetDocumentId),
+    check(
+      "document_references_not_self_check",
+      sql`${table.sourceDocumentId} <> ${table.targetDocumentId}`,
+    ),
   ],
 );
 

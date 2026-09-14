@@ -8,7 +8,7 @@ export function AppNav() {
         <Link href="/" className="font-semibold tracking-tight">Lifeboard</Link>
         <div className="flex items-center gap-1 text-sm">
           <Link href="/" className="inline-flex h-9 items-center gap-1.5 px-3 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950">
-            <LibraryBig size={16} aria-hidden="true" /> 주제
+            <LibraryBig size={16} aria-hidden="true" /> 문서
           </Link>
           <Link href="/todos" className="inline-flex h-9 items-center gap-1.5 px-3 text-neutral-700 hover:bg-neutral-100 hover:text-neutral-950">
             <CheckSquare2 size={16} aria-hidden="true" /> Todo

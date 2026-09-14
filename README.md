@@ -1,12 +1,13 @@
 # Lifeboard
 
-관심 주제별 문서와 할 일을 한곳에서 관리하기 위한 개인용 생산성 웹앱입니다. 주제별로 짧은 문서를 빠르게 기록하고, 별도 Todo 화면에서 할 일을 관리할 수 있습니다.
+계층형 문서와 할 일을 한곳에서 관리하기 위한 개인용 생산성 웹앱입니다. 문서 안의 하위 문서를 따라 탐색하고, 별도 Todo 화면에서 할 일을 관리할 수 있습니다.
 
 ## 현재 기능
 
-- 관심 주제 생성·수정·보관·복원
-- 주제별 문서 생성·수정·보관·복원
-- 주제 카드의 문서 수, 최근 문서, 마지막 활동일 표시
+- 루트 문서 목록과 하위 문서 수·최근 활동 표시
+- 문서 상세의 상위 경로, 직접 하위 문서, 참조·역참조 조회
+- 기존 주제 주소에서 새 문서 주소로 이동
+- 기존 주제·문서 생성·수정·보관·복원은 `/topics/manage`에서 제공
 - Todo 생성 및 목록 조회
 - Todo 제목·메모·마감일·우선순위 수정
 - 완료·미완료 상태 전환
@@ -83,8 +84,9 @@ src/
   app/
     actions.ts      # Todo Server Actions
     layout.tsx      # 루트 레이아웃
-    page.tsx        # 주제 대시보드
-    topics/         # 주제 상세 및 주제·문서 보관함
+    page.tsx        # 루트 문서 목록
+    documents/      # 문서 상세·경로·참조 조회
+    topics/         # 기존 주제 관리 및 보관함, 옛 주소 연결
     todos/          # Todo 화면과 보관함
   db/
     index.ts        # Neon/Drizzle 연결
@@ -102,7 +104,7 @@ docs/
 
 ## 현재 범위와 다음 단계
 
-현재 구현은 단일 사용자용 지식·Todo MVP입니다. 인증, 문서 관계 그래프와 CI는 아직 포함되어 있지 않습니다. 주제·문서 MVP의 결정 사항은 [`docs/topics-mvp.md`](docs/topics-mvp.md), 장기 방향은 [`docs/initial-architecture.md`](docs/initial-architecture.md)에서 확인할 수 있습니다.
+현재 구현은 단일 사용자용 지식·Todo MVP입니다. 새 계층 화면은 읽기 단계이며, 문서의 계층 이동과 참조 추가·제거는 아직 제공하지 않습니다. 인증, 문서 관계 그래프와 CI도 포함되어 있지 않습니다. 현재 주제·문서 MVP의 결정 사항은 [`docs/topics-mvp.md`](docs/topics-mvp.md), 재귀적 포함 문서 구조로의 변경 기획은 [`docs/recursive-documents-plan.md`](docs/recursive-documents-plan.md), 장기 방향은 [`docs/initial-architecture.md`](docs/initial-architecture.md)에서 확인할 수 있습니다.
 
 ## 배포
 

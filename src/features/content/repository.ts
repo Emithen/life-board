@@ -54,6 +54,7 @@ export async function listTopics(archived = false) {
   >();
 
   for (const document of documentRows) {
+    if (!document.topicId) continue;
     const summary = summaries.get(document.topicId);
     if (summary) {
       summary.count += 1;
