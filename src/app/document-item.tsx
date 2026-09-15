@@ -9,6 +9,8 @@ import {
   updateDocument,
 } from "./content-actions";
 import { DocumentFields } from "./document-fields";
+import { DocumentMarkdown } from "./document-markdown";
+import styles from "./document-markdown.module.css";
 
 type DocumentItemProps = {
   topicId: string;
@@ -68,7 +70,11 @@ export function DocumentItem({ topicId, document, archived = false }: DocumentIt
         <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
           <div className="min-w-0">
             <h2 className="break-words text-base font-medium">{document.title}</h2>
-            {document.content ? <p className="mt-2 whitespace-pre-wrap break-words font-mono text-sm leading-6 text-neutral-600">{document.content}</p> : null}
+            {document.content ? (
+              <div className={`${styles.content} mt-2 text-sm leading-6 text-neutral-600`}>
+                <DocumentMarkdown content={document.content} />
+              </div>
+            ) : null}
             <p className="mt-3 text-xs text-neutral-400">{document.updatedAt} 수정</p>
           </div>
           <div className="flex items-start gap-2">

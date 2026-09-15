@@ -7,7 +7,7 @@
 - 루트 문서 목록과 하위 문서 수·최근 활동 표시
 - 문서 상세의 상위 경로, 직접 하위 문서, 참조·역참조 조회
 - 기존 주제 주소에서 새 문서 주소로 이동
-- 기존 주제·문서 생성·수정·보관·복원은 `/topics/manage`에서 제공
+- 기존 주제·Markdown 문서 생성·수정·보관·복원 및 본문 렌더링은 `/topics/manage`에서 제공
 - Todo 생성 및 목록 조회
 - Todo 제목·메모·마감일·우선순위 수정
 - 완료·미완료 상태 전환
@@ -72,7 +72,7 @@ pnpm dev
 | `pnpm build` | 프로덕션 빌드 |
 | `pnpm start` | 빌드된 앱 실행 |
 | `pnpm lint` | ESLint 검사 |
-| `pnpm test` | Todo 입력 검증 단위 테스트 |
+| `pnpm test` | 입력 검증과 Markdown 렌더링 테스트 |
 | `pnpm db:generate` | 스키마 변경으로부터 마이그레이션 생성 |
 | `pnpm db:migrate` | 데이터베이스에 마이그레이션 적용 |
 | `pnpm db:studio` | Drizzle Studio 실행 |
