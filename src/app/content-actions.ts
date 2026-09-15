@@ -1,13 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { isDatabaseConfigured } from "@/db";
 import type { ContentActionState } from "@/features/content/model";
 import {
+  archiveDocumentInTreeById,
+  insertChildDocument,
   insertDocument,
   insertTopic,
   setDocumentArchived,
   setTopicArchived,
+  updateDocumentInTreeById,
   updateDocumentById,
   updateTopicById,
 } from "@/features/content/repository";
@@ -68,10 +72,10 @@ export async function createTopic(
     await insertTopic(parsed.data);
     revalidatePath("/");
     revalidatePath("/topics/manage");
-    return { status: "success", message: "주제를 추가했습니다." };
+    return { status: "success", message: "문서를 만들었습니다." };
   } catch (error) {
     console.error("Topic creation failed", error);
-    return errorState("주제를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    return errorState("문서를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
   }
 }
 
@@ -80,7 +84,7 @@ export async function updateTopic(
   _previousState: ContentActionState,
   formData: FormData,
 ): Promise<ContentActionState> {
-  if (!isValidContentId(id)) return errorState("올바르지 않은 주제 요청입니다.");
+  if (!isValidContentId(id)) return errorState("올바르지 않은 문서 요청입니다.");
   const parsed = parseTopicInput(formData);
   if (!parsed.success) {
     return {
@@ -92,9 +96,9 @@ export async function updateTopic(
 
   return runContentMutation({
     mutate: () => updateTopicById(id, parsed.data),
-    successMessage: "주제를 수정했습니다.",
-    notFoundMessage: "수정할 수 있는 주제를 찾을 수 없습니다.",
-    failureMessage: "주제를 수정하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    successMessage: "문서를 수정했습니다.",
+    notFoundMessage: "수정할 수 있는 문서를 찾을 수 없습니다.",
+    failureMessage: "문서를 수정하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     paths: ["/", "/topics/manage", `/topics/manage/${id}`, `/topics/${id}`],
   });
 }
@@ -106,12 +110,12 @@ export async function archiveTopic(
 ): Promise<ContentActionState> {
   void _previousState;
   void _formData;
-  if (!isValidContentId(id)) return errorState("올바르지 않은 주제 요청입니다.");
+  if (!isValidContentId(id)) return errorState("올바르지 않은 문서 요청입니다.");
   return runContentMutation({
     mutate: () => setTopicArchived(id, true),
-    successMessage: "주제를 보관했습니다.",
-    notFoundMessage: "보관할 수 있는 주제를 찾을 수 없습니다.",
-    failureMessage: "주제를 보관하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    successMessage: "문서를 보관했습니다.",
+    notFoundMessage: "보관할 수 있는 문서를 찾을 수 없습니다.",
+    failureMessage: "문서를 보관하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     paths: ["/", "/topics/manage", "/topics/archive", `/topics/manage/${id}`, `/topics/${id}`],
   });
 }
@@ -123,12 +127,12 @@ export async function restoreTopic(
 ): Promise<ContentActionState> {
   void _previousState;
   void _formData;
-  if (!isValidContentId(id)) return errorState("올바르지 않은 주제 요청입니다.");
+  if (!isValidContentId(id)) return errorState("올바르지 않은 문서 요청입니다.");
   return runContentMutation({
     mutate: () => setTopicArchived(id, false),
-    successMessage: "주제를 복원했습니다.",
-    notFoundMessage: "복원할 수 있는 주제를 찾을 수 없습니다.",
-    failureMessage: "주제를 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    successMessage: "문서를 복원했습니다.",
+    notFoundMessage: "복원할 수 있는 문서를 찾을 수 없습니다.",
+    failureMessage: "문서를 복원하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     paths: ["/", "/topics/manage", "/topics/archive", `/topics/manage/${id}`, `/topics/${id}`],
   });
 }
@@ -151,7 +155,7 @@ export async function createDocument(
   return runContentMutation({
     mutate: () => insertDocument(topicId, parsed.data),
     successMessage: "문서를 추가했습니다.",
-    notFoundMessage: "문서를 추가할 수 있는 주제를 찾을 수 없습니다.",
+    notFoundMessage: "상위 문서를 찾을 수 없습니다.",
     failureMessage: "문서를 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     paths: ["/", `/topics/manage/${topicId}`, `/topics/${topicId}`],
   });
@@ -225,4 +229,81 @@ export async function restoreDocument(
   void _previousState;
   void _formData;
   return changeDocumentArchiveState(topicId, id, false);
+}
+
+export async function updateDocumentFromDetail(
+  id: string,
+  _previousState: ContentActionState,
+  formData: FormData,
+): Promise<ContentActionState> {
+  if (!isValidContentId(id)) return errorState("올바르지 않은 문서 요청입니다.");
+  const parsed = parseDocumentInput(formData);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "입력 내용을 확인해 주세요.",
+      fieldErrors: parsed.fieldErrors,
+    };
+  }
+
+  return runContentMutation({
+    mutate: () => updateDocumentInTreeById(id, parsed.data),
+    successMessage: "문서를 수정했습니다.",
+    notFoundMessage: "수정할 수 있는 문서를 찾을 수 없습니다.",
+    failureMessage: "문서를 수정하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    paths: ["/", `/documents/${id}`],
+  });
+}
+
+export async function archiveDocumentFromDetail(
+  id: string,
+  _previousState: ContentActionState,
+  _formData: FormData,
+): Promise<ContentActionState> {
+  void _previousState;
+  void _formData;
+  if (!isValidContentId(id)) return errorState("올바르지 않은 문서 요청입니다.");
+
+  return runContentMutation({
+    mutate: () => archiveDocumentInTreeById(id),
+    successMessage: "문서를 보관했습니다.",
+    notFoundMessage: "보관할 수 있는 문서를 찾을 수 없습니다.",
+    failureMessage: "문서를 보관하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    paths: ["/", `/documents/${id}`],
+  });
+}
+
+export async function createChildDocument(
+  parentId: string,
+  _previousState: ContentActionState,
+  formData: FormData,
+): Promise<ContentActionState> {
+  if (!isValidContentId(parentId)) {
+    return errorState("올바르지 않은 상위 문서 요청입니다.");
+  }
+  const parsed = parseDocumentInput(formData);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "입력 내용을 확인해 주세요.",
+      fieldErrors: parsed.fieldErrors,
+    };
+  }
+  if (!isDatabaseConfigured()) return databaseErrorState();
+
+  let createdId: string | null;
+  try {
+    createdId = await insertChildDocument(parentId, parsed.data);
+  } catch (error) {
+    console.error("Child document creation failed", error);
+    return errorState("하위 문서를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
+  if (!createdId) {
+    return errorState("하위 문서를 추가할 수 있는 상위 문서를 찾을 수 없습니다.");
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/documents/${parentId}`);
+  redirect(`/documents/${createdId}`);
 }

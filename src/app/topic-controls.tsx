@@ -17,7 +17,7 @@ export function TopicArchiveForm({ id }: { id: string }) {
         <button
           type="submit"
           disabled={pending}
-          title="주제 보관"
+          title="문서 보관"
           className="inline-flex size-9 items-center justify-center border border-neutral-200 text-neutral-500 hover:text-neutral-950 disabled:text-neutral-300"
         >
           {pending ? <LoaderCircle size={15} className="animate-spin" /> : <Archive size={15} />}

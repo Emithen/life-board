@@ -21,17 +21,17 @@ export default async function TopicsPage() {
         <header className="flex flex-col gap-5 border-b border-neutral-200 pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-sm font-medium text-emerald-700">Knowledge workspace</p>
-            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">관심 주제</h1>
-            <p className="mt-2 text-sm text-neutral-500">지금 배우고 생각하는 것들을 주제별로 모아보세요.</p>
+            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">문서 관리</h1>
+            <p className="mt-2 text-sm text-neutral-500">새 문서를 만들거나 기존 문서를 관리하세요.</p>
           </div>
           <Link href="/topics/archive" className="inline-flex h-10 items-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm text-neutral-700 hover:border-neutral-950 hover:text-neutral-950">
-            <Archive size={16} aria-hidden="true" /> 주제 보관함
+            <Archive size={16} aria-hidden="true" /> 문서 보관함
           </Link>
         </header>
 
         {!configured ? (
           <section className="border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <strong>DB 연결 대기 중.</strong> 마이그레이션을 적용하면 주제와 문서 저장이 활성화됩니다.
+            <strong>DB 연결 대기 중.</strong> 마이그레이션을 적용하면 문서 저장이 활성화됩니다.
           </section>
         ) : null}
 
@@ -41,7 +41,7 @@ export default async function TopicsPage() {
             {items.length === 0 ? (
               <div className="flex min-h-72 flex-col items-center justify-center border border-neutral-200 bg-white px-5 text-center text-neutral-500">
                 <LibraryBig size={28} aria-hidden="true" />
-                <p className="mt-3 text-sm">아직 주제가 없습니다. 첫 관심사를 등록해 보세요.</p>
+                <p className="mt-3 text-sm">아직 문서가 없습니다. 첫 문서를 만들어 보세요.</p>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">

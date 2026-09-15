@@ -27,9 +27,9 @@ export function parseTopicInput(formData: FormData) {
   const fieldErrors: ContentFieldErrors = {};
 
   if (!name) {
-    fieldErrors.name = "주제 이름을 입력해 주세요.";
+    fieldErrors.name = "문서 제목을 입력해 주세요.";
   } else if (name.length > TOPIC_NAME_MAX_LENGTH) {
-    fieldErrors.name = `주제 이름은 ${TOPIC_NAME_MAX_LENGTH}자 이하로 입력해 주세요.`;
+    fieldErrors.name = `문서 제목은 ${TOPIC_NAME_MAX_LENGTH}자 이하로 입력해 주세요.`;
   }
 
   if (description.length > TOPIC_DESCRIPTION_MAX_LENGTH) {
@@ -37,7 +37,7 @@ export function parseTopicInput(formData: FormData) {
   }
 
   if (!isTopicColor(color)) {
-    fieldErrors.color = "올바른 주제 색상을 선택해 주세요.";
+    fieldErrors.color = "올바른 강조 색상을 선택해 주세요.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {

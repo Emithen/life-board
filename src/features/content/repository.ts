@@ -4,6 +4,11 @@ import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/db";
 import { documents, topics } from "@/db/schema";
 import type { TopicColor } from "./model";
+import {
+  getDocumentPath,
+  isArchivedPath,
+  type DocumentNode,
+} from "./tree";
 
 export type TopicInput = {
   name: string;
@@ -196,4 +201,138 @@ export async function setDocumentArchived(
     await db().update(topics).set({ updatedAt: new Date() }).where(eq(topics.id, topicId));
   }
   return updated.length > 0;
+}
+
+async function getEditableDocument(id: string) {
+  const [rows, nodes] = await Promise.all([
+    db()
+      .select({
+        id: documents.id,
+        topicId: documents.topicId,
+        legacyTopicId: documents.legacyTopicId,
+      })
+      .from(documents)
+      .where(eq(documents.id, id))
+      .limit(1),
+    db()
+      .select({
+        id: documents.id,
+        parentId: documents.parentId,
+        title: documents.title,
+        archivedAt: documents.archivedAt,
+        updatedAt: documents.updatedAt,
+        accentColor: documents.accentColor,
+        legacyTopicId: documents.legacyTopicId,
+      })
+      .from(documents),
+  ]);
+
+  const document = rows[0];
+  if (!document) return null;
+
+  const byId = new Map(
+    (nodes satisfies DocumentNode[]).map((node) => [node.id, node]),
+  );
+  const path = getDocumentPath(byId, id);
+  if (!path || isArchivedPath(path)) return null;
+  return document;
+}
+
+export async function updateDocumentInTreeById(
+  id: string,
+  input: DocumentInput,
+) {
+  const document = await getEditableDocument(id);
+  if (!document) return false;
+  const updatedAt = new Date();
+
+  if (document.legacyTopicId) {
+    const updated = await db()
+      .update(topics)
+      .set({ name: input.title, description: input.content, updatedAt })
+      .where(
+        and(
+          eq(topics.id, document.legacyTopicId),
+          isNull(topics.archivedAt),
+        ),
+      )
+      .returning({ id: topics.id });
+    return updated.length > 0;
+  }
+
+  const updated = await db()
+    .update(documents)
+    .set({ ...input, updatedAt })
+    .where(and(eq(documents.id, id), isNull(documents.archivedAt)))
+    .returning({ id: documents.id });
+
+  if (updated.length > 0 && document.topicId) {
+    await db()
+      .update(topics)
+      .set({ updatedAt })
+      .where(eq(topics.id, document.topicId));
+  }
+  return updated.length > 0;
+}
+
+export async function archiveDocumentInTreeById(id: string) {
+  const document = await getEditableDocument(id);
+  if (!document) return false;
+  const updatedAt = new Date();
+
+  if (document.legacyTopicId) {
+    const updated = await db()
+      .update(topics)
+      .set({ archivedAt: updatedAt, updatedAt })
+      .where(
+        and(
+          eq(topics.id, document.legacyTopicId),
+          isNull(topics.archivedAt),
+        ),
+      )
+      .returning({ id: topics.id });
+    return updated.length > 0;
+  }
+
+  const updated = await db()
+    .update(documents)
+    .set({ archivedAt: updatedAt, updatedAt })
+    .where(and(eq(documents.id, id), isNull(documents.archivedAt)))
+    .returning({ id: documents.id });
+
+  if (updated.length > 0 && document.topicId) {
+    await db()
+      .update(topics)
+      .set({ updatedAt })
+      .where(eq(topics.id, document.topicId));
+  }
+  return updated.length > 0;
+}
+
+export async function insertChildDocument(
+  parentId: string,
+  input: DocumentInput,
+) {
+  const parent = await getEditableDocument(parentId);
+  if (!parent) return null;
+
+  const topicId = parent.topicId ?? parent.legacyTopicId;
+  const updatedAt = new Date();
+  const [created] = await db()
+    .insert(documents)
+    .values({
+      ...input,
+      parentId,
+      topicId,
+      updatedAt,
+    })
+    .returning({ id: documents.id });
+
+  if (created && topicId) {
+    await db()
+      .update(topics)
+      .set({ updatedAt })
+      .where(eq(topics.id, topicId));
+  }
+  return created?.id ?? null;
 }

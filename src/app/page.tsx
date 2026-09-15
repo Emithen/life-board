@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, FileText, FolderOpen, LibraryBig } from "lucide-react";
+import { ArrowUpRight, FilePlus2, FileText, LibraryBig } from "lucide-react";
 import { listRootDocuments } from "@/features/content/read-repository";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +22,8 @@ export default async function DocumentsPage() {
             <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">문서</h1>
             <p className="mt-2 text-sm text-neutral-500">문서를 열고, 그 안에 담긴 문서를 따라가 보세요.</p>
           </div>
-          <Link href="/topics/manage" className="inline-flex h-10 items-center gap-2 border border-neutral-300 bg-white px-4 text-sm hover:border-neutral-950">
-            <FolderOpen size={16} aria-hidden="true" /> 주제 관리
+          <Link href="/topics/manage#new-document" className="inline-flex h-10 items-center gap-2 border border-neutral-300 bg-white px-4 text-sm hover:border-neutral-950">
+            <FilePlus2 size={16} aria-hidden="true" /> 새 문서
           </Link>
         </header>
 
@@ -37,10 +37,10 @@ export default async function DocumentsPage() {
           <section className="flex min-h-72 flex-col items-center justify-center border border-neutral-200 bg-white px-5 text-center text-neutral-500">
             <LibraryBig size={30} aria-hidden="true" />
             <p className="mt-3 text-sm">아직 문서가 없습니다.</p>
-            {configured ? <Link href="/topics/manage" className="mt-4 text-sm font-medium text-emerald-700 hover:underline">첫 문서 만들기</Link> : null}
+            {configured ? <Link href="/topics/manage#new-document" className="mt-4 text-sm font-medium text-emerald-700 hover:underline">첫 문서 만들기</Link> : null}
           </section>
         ) : (
-          <section aria-label="루트 문서" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <section aria-label="문서 목록" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map(({ root, descendantCount, latestActivityAt, latestDocument }) => (
               <article key={root.id} className="flex flex-col border border-neutral-200 bg-white p-5">
                 <div className="h-1.5 w-12 bg-emerald-700" style={root.accentColor ? { backgroundColor: root.accentColor } : undefined} />

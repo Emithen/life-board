@@ -35,7 +35,7 @@ export default async function DocumentArchivePage({
             <p className="text-sm text-neutral-500">{topic.name}</p>
             <h1 className="mt-2 flex items-center gap-2 text-3xl font-semibold"><Archive size={28} /> 문서 보관함</h1>
           </div>
-          <Link href={`/topics/${topic.id}`} className="inline-flex h-10 items-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm"><ChevronLeft size={16} /> 주제로 돌아가기</Link>
+          <Link href={`/topics/${topic.id}`} className="inline-flex h-10 items-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm"><ChevronLeft size={16} /> 문서로 돌아가기</Link>
         </header>
         <section className="border border-neutral-200 bg-white">
           {items.length === 0 ? <p className="p-12 text-center text-sm text-neutral-500">보관된 문서가 없습니다.</p> : items.map((document) => (

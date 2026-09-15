@@ -20,7 +20,7 @@ export function TopicFields({
     <>
       <div>
         <label htmlFor={id("name")} className="text-sm font-medium">
-          주제 이름
+          제목
         </label>
         <input
           id={id("name")}
@@ -42,7 +42,7 @@ export function TopicFields({
 
       <div>
         <label htmlFor={id("description")} className="text-sm font-medium">
-          설명
+          본문
         </label>
         <textarea
           id={id("description")}
@@ -50,7 +50,7 @@ export function TopicFields({
           rows={3}
           maxLength={TOPIC_DESCRIPTION_MAX_LENGTH}
           defaultValue={values?.description ?? undefined}
-          placeholder="이 주제에 어떤 기록을 모을지 적어 주세요."
+          placeholder="이 문서에 기록할 내용을 적어 주세요."
           aria-invalid={Boolean(errors?.description)}
           aria-describedby={
             errors?.description ? id("description-error") : undefined
@@ -65,7 +65,7 @@ export function TopicFields({
       </div>
 
       <fieldset>
-        <legend className="text-sm font-medium">색상</legend>
+        <legend className="text-sm font-medium">강조 색상</legend>
         <div className="mt-2 flex flex-wrap gap-2">
           {TOPIC_COLORS.map((color, index) => (
             <label key={color} className="cursor-pointer">

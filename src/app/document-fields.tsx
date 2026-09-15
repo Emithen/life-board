@@ -33,7 +33,7 @@ export function DocumentFields({
         {errors?.title ? <p id={titleErrorId} className="mt-1 text-xs text-red-700">{errors.title}</p> : null}
       </div>
       <div>
-        <label htmlFor={`${idPrefix}-content`} className="text-sm font-medium">메모</label>
+        <label htmlFor={`${idPrefix}-content`} className="text-sm font-medium">본문</label>
         <textarea
           id={`${idPrefix}-content`}
           name="content"

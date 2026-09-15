@@ -42,7 +42,7 @@ export default async function TopicPage({
     <main className="min-h-screen bg-[#f7f7f4] px-5 py-6 sm:px-8 lg:px-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <header className="border-b border-neutral-200 pb-6">
-          <Link href="/" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-950"><ChevronLeft size={16} /> 주제</Link>
+          <Link href="/" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-950"><ChevronLeft size={16} /> 문서</Link>
           <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="mb-3 h-1.5 w-12" style={{ backgroundColor: topic.color }} />
@@ -59,7 +59,7 @@ export default async function TopicPage({
         </header>
 
         {archived ? (
-          <section className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">보관된 주제입니다. 문서는 그대로 유지되며, 주제를 복원하면 다시 작성할 수 있습니다.</section>
+          <section className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">보관된 문서입니다. 복원하면 다시 작성할 수 있습니다.</section>
         ) : (
           <section className="grid items-start gap-6 lg:grid-cols-[360px_1fr]">
             <DocumentForm topicId={topic.id} />
