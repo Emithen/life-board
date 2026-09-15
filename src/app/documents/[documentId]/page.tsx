@@ -76,16 +76,25 @@ export default async function DocumentPage({
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
         <nav aria-label="문서 경로" className="flex flex-wrap items-center gap-1 text-sm text-neutral-500">
           <Link href="/" className="hover:text-emerald-700">문서</Link>
-          {path.map((node, index) => (
-            <span key={node.id} className="inline-flex min-w-0 items-center gap-1">
+          {path.length > 2 ? (
+            <span className="inline-flex items-center gap-1 sm:hidden">
               <ChevronRight size={14} aria-hidden="true" />
-              {index === path.length - 1 ? (
-                <span aria-current="page" className="max-w-56 truncate text-neutral-950">{node.title}</span>
-              ) : (
-                <Link href={`/documents/${node.id}`} className="max-w-56 truncate hover:text-emerald-700">{node.title}</Link>
-              )}
+              <span aria-label="중간 경로 생략">…</span>
             </span>
-          ))}
+          ) : null}
+          {path.map((node, index) => {
+            const hiddenOnMobile = path.length > 2 && index < path.length - 2;
+            return (
+              <span key={node.id} className={`${hiddenOnMobile ? "hidden sm:inline-flex" : "inline-flex"} min-w-0 items-center gap-1`}>
+                <ChevronRight size={14} aria-hidden="true" />
+                {index === path.length - 1 ? (
+                  <span aria-current="page" className="max-w-36 truncate text-neutral-950 sm:max-w-56">{node.title}</span>
+                ) : (
+                  <Link href={`/documents/${node.id}`} className="max-w-36 truncate hover:text-emerald-700 sm:max-w-56">{node.title}</Link>
+                )}
+              </span>
+            );
+          })}
         </nav>
 
         <DocumentEditor
@@ -116,6 +125,7 @@ export default async function DocumentPage({
                 title: child.title,
                 updatedAt: dateFormatter.format(child.updatedAt),
                 archived: archived || child.archivedAt !== null,
+                childCount: child.childCount,
               }))}
             />
           </div>

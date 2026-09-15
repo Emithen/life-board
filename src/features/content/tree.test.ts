@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   canMoveDocument,
+  countActiveDirectChildren,
   getDocumentPath,
   isArchivedPath,
   listDocumentMoveDestinations,
@@ -74,4 +75,19 @@ test("문서 이동 목적지에서 자신과 자손, 보관된 경로를 제외
   assert.equal(canMoveDocument(nodes, "child", "grandchild"), false);
   assert.equal(canMoveDocument(nodes, "child", "archived"), false);
   assert.equal(canMoveDocument(nodes, "archived", null), false);
+});
+
+test("활성 상태인 직접 하위 문서만 집계한다", () => {
+  const nodes = [
+    node("root", null, 1),
+    node("child", "root", 2),
+    node("other-child", "root", 3),
+    node("archived-child", "root", 4, true),
+    node("grandchild", "child", 5),
+  ];
+
+  const counts = countActiveDirectChildren(nodes);
+  assert.equal(counts.get("root"), 2);
+  assert.equal(counts.get("child"), 1);
+  assert.equal(counts.get("other-child"), undefined);
 });

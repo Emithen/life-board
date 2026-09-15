@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Archive, FileText, LibraryBig } from "lucide-react";
+import { FileText, LibraryBig } from "lucide-react";
 import { listTopics } from "@/features/content/repository";
 import { TopicForm } from "../../topic-form";
-import { TopicArchiveForm, TopicEditForm } from "../../topic-controls";
+import { TopicEditForm } from "../../topic-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +24,6 @@ export default async function TopicsPage() {
             <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">문서 관리</h1>
             <p className="mt-2 text-sm text-neutral-500">새 문서를 만들거나 기존 문서를 관리하세요.</p>
           </div>
-          <Link href="/topics/archive" className="inline-flex h-10 items-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm text-neutral-700 hover:border-neutral-950 hover:text-neutral-950">
-            <Archive size={16} aria-hidden="true" /> 문서 보관함
-          </Link>
         </header>
 
         {!configured ? (
@@ -59,9 +56,8 @@ export default async function TopicsPage() {
                     <p className="mt-2 truncate text-xs text-neutral-500">
                       {topic.latestDocument ? `최근: ${topic.latestDocument.title}` : "아직 작성한 문서가 없습니다."}
                     </p>
-                    <div className="mt-4 flex items-start justify-between gap-2">
+                    <div className="mt-4">
                       <TopicEditForm key={topic.updatedAt.toISOString()} topic={topic} />
-                      <TopicArchiveForm id={topic.id} />
                     </div>
                   </article>
                 ))}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import {
-  ArrowUpRight,
+  ChevronRight,
   FilePlus2,
   FileText,
   LoaderCircle,
@@ -18,6 +18,7 @@ type ChildDocument = {
   title: string;
   updatedAt: string;
   archived: boolean;
+  childCount: number;
 };
 
 function ChildDocumentCreateForm({
@@ -107,7 +108,10 @@ export function ChildDocumentSection({
 
       {items.length === 0 ? (
         <div className="px-5 py-10 text-center text-sm text-neutral-500">
-          <p>하위 문서가 없습니다.</p>
+          <p>아직 하위 문서가 없습니다.</p>
+          <p className="mt-1 text-xs text-neutral-400">
+            이 문서에서 이어갈 내용을 만들어 보세요.
+          </p>
           {!archived && !creating ? (
             <button
               type="button"
@@ -131,8 +135,11 @@ export function ChildDocumentSection({
                   {item.archived ? (
                     <span className="text-amber-700">보관됨</span>
                   ) : null}
+                  {item.childCount > 0 ? (
+                    <span>하위 문서 {item.childCount}개</span>
+                  ) : null}
                   {item.updatedAt}
-                  <ArrowUpRight size={16} aria-hidden="true" />
+                  <ChevronRight size={16} aria-hidden="true" />
                 </span>
               </Link>
             </li>

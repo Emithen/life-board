@@ -78,6 +78,17 @@ export function canMoveDocument(
   );
 }
 
+export function countActiveDirectChildren(nodes: DocumentNode[]) {
+  const counts = new Map<string, number>();
+
+  for (const node of nodes) {
+    if (!node.parentId || node.archivedAt !== null) continue;
+    counts.set(node.parentId, (counts.get(node.parentId) ?? 0) + 1);
+  }
+
+  return counts;
+}
+
 export function summarizeRootDocuments(nodes: DocumentNode[]) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const summaries = new Map<

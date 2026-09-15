@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, FilePlus2, FileText, LibraryBig } from "lucide-react";
+import { ChevronRight, FilePlus2, FileText, LibraryBig } from "lucide-react";
 import { listRootDocuments } from "@/features/content/read-repository";
 
 export const dynamic = "force-dynamic";
@@ -42,19 +42,21 @@ export default async function DocumentsPage() {
         ) : (
           <section aria-label="문서 목록" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map(({ root, descendantCount, latestActivityAt, latestDocument }) => (
-              <article key={root.id} className="flex flex-col border border-neutral-200 bg-white p-5">
-                <div className="h-1.5 w-12 bg-emerald-700" style={root.accentColor ? { backgroundColor: root.accentColor } : undefined} />
-                <Link href={`/documents/${root.id}`} className="group mt-4 flex items-start justify-between gap-3">
-                  <h2 className="break-words text-xl font-semibold group-hover:text-emerald-700">{root.title}</h2>
-                  <ArrowUpRight size={18} className="mt-1 shrink-0 text-neutral-400 group-hover:text-emerald-700" aria-hidden="true" />
+              <article key={root.id} className="border border-neutral-200 bg-white">
+                <Link href={`/documents/${root.id}`} className="group flex h-full flex-col p-5 hover:bg-neutral-50">
+                  <div className="h-1.5 w-12 bg-emerald-700" style={root.accentColor ? { backgroundColor: root.accentColor } : undefined} />
+                  <div className="mt-4 flex items-start justify-between gap-3">
+                    <h2 className="break-words text-xl font-semibold group-hover:text-emerald-700">{root.title}</h2>
+                    <ChevronRight size={18} className="mt-1 shrink-0 text-neutral-400 group-hover:text-emerald-700" aria-hidden="true" />
+                  </div>
+                  <p className="mt-3 min-h-8 text-xs text-neutral-500">
+                    {latestDocument ? `최근 하위 문서: ${latestDocument.title}` : "아직 하위 문서가 없습니다."}
+                  </p>
+                  <div className="mt-auto flex items-center justify-between border-t border-neutral-100 pt-4 text-xs text-neutral-500">
+                    <span className="inline-flex items-center gap-1.5"><FileText size={14} aria-hidden="true" /> 하위 문서 {descendantCount}개</span>
+                    <span>{dateFormatter.format(latestActivityAt)} 활동</span>
+                  </div>
                 </Link>
-                <p className="mt-3 min-h-8 text-xs text-neutral-500">
-                  {latestDocument ? `최근 하위 문서: ${latestDocument.title}` : "아직 하위 문서가 없습니다."}
-                </p>
-                <div className="mt-auto flex items-center justify-between border-t border-neutral-100 pt-4 text-xs text-neutral-500">
-                  <span className="inline-flex items-center gap-1.5"><FileText size={14} aria-hidden="true" /> 하위 문서 {descendantCount}개</span>
-                  <span>{dateFormatter.format(latestActivityAt)} 활동</span>
-                </div>
               </article>
             ))}
           </section>

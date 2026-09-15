@@ -1,13 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Archive, FolderInput, LoaderCircle, Pencil, X } from "lucide-react";
+import { FolderInput, LoaderCircle, Pencil, X } from "lucide-react";
 import { initialContentActionState } from "@/features/content/model";
-import {
-  archiveDocumentFromDetail,
-  moveDocument,
-  updateDocumentFromDetail,
-} from "./content-actions";
+import { moveDocument, updateDocumentFromDetail } from "./content-actions";
 import { DocumentFields } from "./document-fields";
 import { DocumentMarkdown } from "./document-markdown";
 import styles from "./document-markdown.module.css";
@@ -33,10 +29,6 @@ export function DocumentEditor({
   const [mode, setMode] = useState<"read" | "edit" | "move">("read");
   const [updateState, updateAction, updating] = useActionState(
     updateDocumentFromDetail.bind(null, document.id),
-    initialContentActionState,
-  );
-  const [archiveState, archiveAction, archiving] = useActionState(
-    archiveDocumentFromDetail.bind(null, document.id),
     initialContentActionState,
   );
   const [moveState, moveAction, moving] = useActionState(
@@ -78,28 +70,9 @@ export function DocumentEditor({
               >
                 <FolderInput size={15} aria-hidden="true" /> 이동
               </button>
-              <form action={archiveAction}>
-                <button
-                  type="submit"
-                  disabled={archiving}
-                  className="inline-flex h-10 items-center gap-2 border border-neutral-300 bg-white px-3 text-sm text-neutral-600 hover:border-amber-700 hover:text-amber-800 disabled:text-neutral-300"
-                >
-                  {archiving ? (
-                    <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
-                  ) : (
-                    <Archive size={15} aria-hidden="true" />
-                  )}
-                  {archiving ? "보관 중..." : "보관"}
-                </button>
-              </form>
             </div>
           ) : null}
         </div>
-        {archiveState.status === "error" ? (
-          <p aria-live="polite" className="mt-3 text-sm text-red-700">
-            {archiveState.message}
-          </p>
-        ) : null}
       </header>
 
       <section

@@ -4,6 +4,7 @@ import { eq, or } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/db";
 import { documentReferences, documents } from "@/db/schema";
 import {
+  countActiveDirectChildren,
   getDocumentPath,
   isArchivedPath,
   listDocumentMoveDestinations,
@@ -61,12 +62,17 @@ export async function getDocumentReadView(id: string) {
   if (!path) throw new Error(`Document ${id} has an invalid parent chain.`);
   const archived = isArchivedPath(path);
   const moveDestinations = listDocumentMoveDestinations(nodes, id);
+  const directChildCounts = countActiveDirectChildren(nodes);
 
   const children = nodes
     .filter(
       (node) => node.parentId === id && (archived || node.archivedAt === null),
     )
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    .map((node) => ({
+      ...node,
+      childCount: directChildCounts.get(node.id) ?? 0,
+    }));
 
   function relatedDocument(relatedId: string) {
     const node = byId.get(relatedId);

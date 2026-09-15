@@ -1,15 +1,11 @@
 import Link from "next/link";
-import { Archive, ChevronLeft, FileText } from "lucide-react";
+import { ChevronLeft, FileText } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getTopicWithDocuments } from "@/features/content/repository";
 import { isValidContentId } from "@/features/content/validation";
 import { DocumentForm } from "../../../document-form";
 import { DocumentItem } from "../../../document-item";
-import {
-  TopicArchiveForm,
-  TopicEditForm,
-  TopicRestoreForm,
-} from "../../../topic-controls";
+import { TopicEditForm } from "../../../topic-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -50,16 +46,12 @@ export default async function TopicPage({
               {topic.description ? <p className="mt-2 text-sm text-neutral-600">{topic.description}</p> : null}
               <p className="mt-3 text-xs text-neutral-400">문서 {items.length}개 · {dateFormatter.format(topic.updatedAt)} 활동</p>
             </div>
-            <div className="flex items-center gap-2">
-              {!archived ? <Link href={`/topics/${topic.id}/archive`} className="inline-flex h-9 items-center gap-1.5 border border-neutral-300 bg-white px-3 text-sm"><Archive size={15} /> 문서 보관함</Link> : null}
-              {archived ? <TopicRestoreForm id={topic.id} /> : <TopicArchiveForm id={topic.id} />}
-            </div>
           </div>
           {!archived ? <TopicEditForm key={topic.updatedAt.toISOString()} topic={topic} /> : null}
         </header>
 
         {archived ? (
-          <section className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">보관된 문서입니다. 복원하면 다시 작성할 수 있습니다.</section>
+          <section className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">현재 사용할 수 없는 문서입니다.</section>
         ) : (
           <section className="grid items-start gap-6 lg:grid-cols-[360px_1fr]">
             <DocumentForm topicId={topic.id} />
