@@ -6,6 +6,7 @@ import { documentReferences, documents } from "@/db/schema";
 import {
   getDocumentPath,
   isArchivedPath,
+  listDocumentMoveDestinations,
   summarizeRootDocuments,
   type DocumentNode,
 } from "./tree";
@@ -59,6 +60,7 @@ export async function getDocumentReadView(id: string) {
   const path = getDocumentPath(byId, id);
   if (!path) throw new Error(`Document ${id} has an invalid parent chain.`);
   const archived = isArchivedPath(path);
+  const moveDestinations = listDocumentMoveDestinations(nodes, id);
 
   const children = nodes
     .filter(
@@ -92,6 +94,7 @@ export async function getDocumentReadView(id: string) {
     path,
     archived,
     children,
+    moveDestinations,
     references,
     backlinks,
   };

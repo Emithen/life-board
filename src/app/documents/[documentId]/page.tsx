@@ -62,7 +62,15 @@ export default async function DocumentPage({
     );
   }
 
-  const { document, path, archived, children, references, backlinks } = view;
+  const {
+    document,
+    path,
+    archived,
+    children,
+    moveDestinations,
+    references,
+    backlinks,
+  } = view;
   return (
     <main className="min-h-screen bg-[#f7f7f4] px-5 py-6 text-neutral-950 sm:px-8 lg:px-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
@@ -88,7 +96,9 @@ export default async function DocumentPage({
             content: document.content,
             accentColor: document.accentColor,
             updatedAt: dateFormatter.format(document.updatedAt),
+            parentId: document.parentId,
           }}
+          moveDestinations={moveDestinations}
           archived={archived}
         />
 

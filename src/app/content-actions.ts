@@ -8,7 +8,9 @@ import {
   archiveDocumentInTreeById,
   insertChildDocument,
   insertDocument,
+  insertRootDocument,
   insertTopic,
+  moveDocumentInTreeById,
   setDocumentArchived,
   setTopicArchived,
   updateDocumentInTreeById,
@@ -306,4 +308,59 @@ export async function createChildDocument(
   revalidatePath("/");
   revalidatePath(`/documents/${parentId}`);
   redirect(`/documents/${createdId}`);
+}
+
+export async function createRootDocument(
+  _previousState: ContentActionState,
+  formData: FormData,
+): Promise<ContentActionState> {
+  const parsed = parseDocumentInput(formData);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "입력 내용을 확인해 주세요.",
+      fieldErrors: parsed.fieldErrors,
+    };
+  }
+  if (!isDatabaseConfigured()) return databaseErrorState();
+
+  let createdId: string | null;
+  try {
+    createdId = await insertRootDocument(parsed.data);
+  } catch (error) {
+    console.error("Document creation failed", error);
+    return errorState("문서를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
+  if (!createdId) {
+    return errorState("문서를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
+  revalidatePath("/");
+  redirect(`/documents/${createdId}`);
+}
+
+export async function moveDocument(
+  id: string,
+  _previousState: ContentActionState,
+  formData: FormData,
+): Promise<ContentActionState> {
+  if (!isValidContentId(id)) return errorState("올바르지 않은 문서 요청입니다.");
+
+  const parentValue = formData.get("parentId");
+  if (typeof parentValue !== "string") {
+    return errorState("이동할 위치를 확인해 주세요.");
+  }
+  const parentId = parentValue.trim() || null;
+  if (parentId && !isValidContentId(parentId)) {
+    return errorState("올바르지 않은 이동 위치입니다.");
+  }
+
+  return runContentMutation({
+    mutate: () => moveDocumentInTreeById(id, parentId),
+    successMessage: "문서를 이동했습니다.",
+    notFoundMessage: "선택한 위치로 문서를 이동할 수 없습니다.",
+    failureMessage: "문서를 이동하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    paths: ["/", `/documents/${id}`],
+  });
 }

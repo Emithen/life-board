@@ -31,6 +31,53 @@ export function isArchivedPath(path: DocumentNode[]) {
   return path.some((node) => node.archivedAt !== null);
 }
 
+export type DocumentMoveDestination = {
+  id: string;
+  title: string;
+  pathLabel: string;
+};
+
+export function listDocumentMoveDestinations(
+  nodes: DocumentNode[],
+  documentId: string,
+): DocumentMoveDestination[] {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const sourcePath = getDocumentPath(byId, documentId);
+  if (!sourcePath || isArchivedPath(sourcePath)) return [];
+
+  return nodes
+    .flatMap((node) => {
+      const path = getDocumentPath(byId, node.id);
+      if (
+        !path ||
+        isArchivedPath(path) ||
+        path.some((pathNode) => pathNode.id === documentId)
+      ) {
+        return [];
+      }
+      return [{
+        id: node.id,
+        title: node.title,
+        pathLabel: path.map((pathNode) => pathNode.title).join(" / "),
+      }];
+    })
+    .sort((a, b) => a.pathLabel.localeCompare(b.pathLabel, "ko"));
+}
+
+export function canMoveDocument(
+  nodes: DocumentNode[],
+  documentId: string,
+  parentId: string | null,
+) {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const sourcePath = getDocumentPath(byId, documentId);
+  if (!sourcePath || isArchivedPath(sourcePath)) return false;
+  if (parentId === null) return true;
+  return listDocumentMoveDestinations(nodes, documentId).some(
+    (destination) => destination.id === parentId,
+  );
+}
+
 export function summarizeRootDocuments(nodes: DocumentNode[]) {
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const summaries = new Map<

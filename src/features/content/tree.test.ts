@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  canMoveDocument,
   getDocumentPath,
   isArchivedPath,
+  listDocumentMoveDestinations,
   summarizeRootDocuments,
   type DocumentNode,
 } from "./tree";
@@ -52,4 +54,24 @@ test("손상된 부모 연결과 순환 경로를 탐색에 사용하지 않는�
   assert.equal(getDocumentPath(byId, "a"), null);
   assert.equal(getDocumentPath(byId, "orphan"), null);
   assert.deepEqual(summarizeRootDocuments(nodes), []);
+});
+
+test("문서 이동 목적지에서 자신과 자손, 보관된 경로를 제외한다", () => {
+  const nodes = [
+    node("root", null, 1),
+    node("child", "root", 2),
+    node("grandchild", "child", 3),
+    node("other", null, 4),
+    node("archived", null, 5, true),
+    node("hidden", "archived", 6),
+  ];
+
+  const destinations = listDocumentMoveDestinations(nodes, "child");
+  assert.deepEqual(destinations.map((item) => item.id), ["other", "root"]);
+  assert.equal(canMoveDocument(nodes, "child", null), true);
+  assert.equal(canMoveDocument(nodes, "child", "other"), true);
+  assert.equal(canMoveDocument(nodes, "child", "child"), false);
+  assert.equal(canMoveDocument(nodes, "child", "grandchild"), false);
+  assert.equal(canMoveDocument(nodes, "child", "archived"), false);
+  assert.equal(canMoveDocument(nodes, "archived", null), false);
 });

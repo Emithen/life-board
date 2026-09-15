@@ -5,6 +5,7 @@ import { db, isDatabaseConfigured } from "@/db";
 import { documents, topics } from "@/db/schema";
 import type { TopicColor } from "./model";
 import {
+  canMoveDocument,
   getDocumentPath,
   isArchivedPath,
   type DocumentNode,
@@ -20,6 +21,14 @@ export type DocumentInput = {
   title: string;
   content: string | null;
 };
+
+export async function insertRootDocument(input: DocumentInput) {
+  const [created] = await db()
+    .insert(documents)
+    .values(input)
+    .returning({ id: documents.id });
+  return created?.id ?? null;
+}
 
 export async function listTopics(archived = false) {
   if (!isDatabaseConfigured()) {
@@ -335,4 +344,38 @@ export async function insertChildDocument(
       .where(eq(topics.id, topicId));
   }
   return created?.id ?? null;
+}
+
+export async function moveDocumentInTreeById(
+  id: string,
+  parentId: string | null,
+) {
+  const nodes = await db()
+    .select({
+      id: documents.id,
+      parentId: documents.parentId,
+      title: documents.title,
+      archivedAt: documents.archivedAt,
+      updatedAt: documents.updatedAt,
+      accentColor: documents.accentColor,
+      legacyTopicId: documents.legacyTopicId,
+    })
+    .from(documents);
+
+  if (!canMoveDocument(nodes, id, parentId)) return false;
+
+  const updatedAt = new Date();
+  const [updated] = await db()
+    .update(documents)
+    .set({ parentId, updatedAt })
+    .where(and(eq(documents.id, id), isNull(documents.archivedAt)))
+    .returning({ topicId: documents.topicId });
+
+  if (updated?.topicId) {
+    await db()
+      .update(topics)
+      .set({ updatedAt })
+      .where(eq(topics.id, updated.topicId));
+  }
+  return Boolean(updated);
 }

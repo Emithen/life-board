@@ -1,10 +1,11 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Archive, LoaderCircle, Pencil, X } from "lucide-react";
+import { Archive, FolderInput, LoaderCircle, Pencil, X } from "lucide-react";
 import { initialContentActionState } from "@/features/content/model";
 import {
   archiveDocumentFromDetail,
+  moveDocument,
   updateDocumentFromDetail,
 } from "./content-actions";
 import { DocumentFields } from "./document-fields";
@@ -18,18 +19,28 @@ type DocumentEditorProps = {
     content: string | null;
     accentColor: string | null;
     updatedAt: string;
+    parentId: string | null;
   };
+  moveDestinations: { id: string; pathLabel: string }[];
   archived: boolean;
 };
 
-export function DocumentEditor({ document, archived }: DocumentEditorProps) {
-  const [editing, setEditing] = useState(false);
+export function DocumentEditor({
+  document,
+  moveDestinations,
+  archived,
+}: DocumentEditorProps) {
+  const [mode, setMode] = useState<"read" | "edit" | "move">("read");
   const [updateState, updateAction, updating] = useActionState(
     updateDocumentFromDetail.bind(null, document.id),
     initialContentActionState,
   );
   const [archiveState, archiveAction, archiving] = useActionState(
     archiveDocumentFromDetail.bind(null, document.id),
+    initialContentActionState,
+  );
+  const [moveState, moveAction, moving] = useActionState(
+    moveDocument.bind(null, document.id),
     initialContentActionState,
   );
 
@@ -51,14 +62,21 @@ export function DocumentEditor({ document, archived }: DocumentEditorProps) {
               {document.updatedAt} 수정
             </p>
           </div>
-          {!archived && !editing ? (
+          {!archived && mode === "read" ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setEditing(true)}
+                onClick={() => setMode("edit")}
                 className="inline-flex h-10 items-center gap-2 border border-neutral-300 bg-white px-3 text-sm hover:border-neutral-950"
               >
                 <Pencil size={15} aria-hidden="true" /> 편집
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("move")}
+                className="inline-flex h-10 items-center gap-2 border border-neutral-300 bg-white px-3 text-sm hover:border-neutral-950"
+              >
+                <FolderInput size={15} aria-hidden="true" /> 이동
               </button>
               <form action={archiveAction}>
                 <button
@@ -85,10 +103,16 @@ export function DocumentEditor({ document, archived }: DocumentEditorProps) {
       </header>
 
       <section
-        aria-label={editing ? "문서 편집" : "문서 본문"}
+        aria-label={
+          mode === "edit"
+            ? "문서 편집"
+            : mode === "move"
+              ? "문서 이동"
+              : "문서 본문"
+        }
         className="min-h-44 border border-neutral-200 bg-white p-6"
       >
-        {editing ? (
+        {mode === "edit" ? (
           <form action={updateAction} className="grid gap-4">
             <DocumentFields
               idPrefix={`edit-document-${document.id}`}
@@ -111,7 +135,7 @@ export function DocumentEditor({ document, archived }: DocumentEditorProps) {
               <button
                 type="button"
                 disabled={updating}
-                onClick={() => setEditing(false)}
+                onClick={() => setMode("read")}
                 className="inline-flex h-10 items-center gap-2 border border-neutral-200 px-3 text-sm"
               >
                 <X size={15} aria-hidden="true" /> 취소
@@ -127,6 +151,64 @@ export function DocumentEditor({ document, archived }: DocumentEditorProps) {
                   <Pencil size={15} aria-hidden="true" />
                 )}
                 {updating ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          </form>
+        ) : mode === "move" ? (
+          <form action={moveAction} className="grid gap-4">
+            <div>
+              <label htmlFor={`move-document-${document.id}`} className="text-sm font-medium">
+                이동할 위치
+              </label>
+              <select
+                id={`move-document-${document.id}`}
+                name="parentId"
+                defaultValue={document.parentId ?? ""}
+                className="mt-2 h-11 w-full border border-neutral-300 bg-white px-3 text-sm outline-none focus:border-emerald-700"
+              >
+                <option value="">문서 목록에 바로 표시</option>
+                {moveDestinations.map((destination) => (
+                  <option key={destination.id} value={destination.id}>
+                    {destination.pathLabel}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-2 text-xs text-neutral-500">
+                선택한 문서 안으로 현재 문서와 모든 하위 문서가 함께 이동합니다.
+              </p>
+            </div>
+            {moveState.message ? (
+              <p
+                aria-live="polite"
+                className={
+                  moveState.status === "error"
+                    ? "text-sm text-red-700"
+                    : "text-sm text-emerald-700"
+                }
+              >
+                {moveState.message}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={moving}
+                onClick={() => setMode("read")}
+                className="inline-flex h-10 items-center gap-2 border border-neutral-200 px-3 text-sm"
+              >
+                <X size={15} aria-hidden="true" /> 취소
+              </button>
+              <button
+                type="submit"
+                disabled={moving}
+                className="inline-flex h-10 items-center gap-2 bg-neutral-950 px-4 text-sm font-medium text-white disabled:bg-neutral-400"
+              >
+                {moving ? (
+                  <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <FolderInput size={15} aria-hidden="true" />
+                )}
+                {moving ? "이동 중..." : "이동"}
               </button>
             </div>
           </form>
