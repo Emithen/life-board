@@ -1,8 +1,14 @@
 import "server-only";
 
-import { eq, or } from "drizzle-orm";
+import { eq, inArray, or } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/db";
-import { documentReferences, documents } from "@/db/schema";
+import {
+  documentReferences,
+  documentTags,
+  documents,
+  tags,
+} from "@/db/schema";
+import type { TagColor } from "./model";
 import {
   countActiveDirectChildren,
   getDocumentPath,
@@ -26,10 +32,55 @@ async function listDocumentNodes(): Promise<DocumentNode[]> {
     .from(documents);
 }
 
+type DocumentTagAssignment = {
+  documentId: string;
+  id: string;
+  name: string;
+  color: TagColor;
+};
+
+async function listDocumentTagAssignments(
+  documentIds: string[],
+): Promise<DocumentTagAssignment[]> {
+  if (documentIds.length === 0) return [];
+  return db()
+    .select({
+      documentId: documentTags.documentId,
+      id: tags.id,
+      name: tags.name,
+      color: tags.color,
+    })
+    .from(documentTags)
+    .innerJoin(tags, eq(documentTags.tagId, tags.id))
+    .where(inArray(documentTags.documentId, documentIds))
+    .orderBy(tags.name);
+}
+
+function groupTagsByDocument(assignments: DocumentTagAssignment[]) {
+  const grouped = new Map<string, Omit<DocumentTagAssignment, "documentId">[]>();
+  for (const { documentId, ...tag } of assignments) {
+    const documentTagList = grouped.get(documentId);
+    if (documentTagList) documentTagList.push(tag);
+    else grouped.set(documentId, [tag]);
+  }
+  return grouped;
+}
+
 export async function listRootDocuments() {
   if (!isDatabaseConfigured()) return { configured: false, items: [] };
   const nodes = await listDocumentNodes();
-  return { configured: true, items: summarizeRootDocuments(nodes) };
+  const summaries = summarizeRootDocuments(nodes);
+  const tagAssignments = await listDocumentTagAssignments(
+    summaries.map((item) => item.root.id),
+  );
+  const tagsByDocument = groupTagsByDocument(tagAssignments);
+  return {
+    configured: true,
+    items: summaries.map((item) => ({
+      ...item,
+      tags: tagsByDocument.get(item.root.id) ?? [],
+    })),
+  };
 }
 
 export async function getDocumentReadView(id: string) {
@@ -37,7 +88,7 @@ export async function getDocumentReadView(id: string) {
     return { configured: false, document: null };
   }
 
-  const [rows, nodes, relations] = await Promise.all([
+  const [rows, nodes, relations, allTags] = await Promise.all([
     db().select().from(documents).where(eq(documents.id, id)).limit(1),
     listDocumentNodes(),
     db()
@@ -52,6 +103,10 @@ export async function getDocumentReadView(id: string) {
           eq(documentReferences.targetDocumentId, id),
         ),
       ),
+    db()
+      .select({ id: tags.id, name: tags.name, color: tags.color })
+      .from(tags)
+      .orderBy(tags.name),
   ]);
 
   const document = rows[0];
@@ -63,6 +118,13 @@ export async function getDocumentReadView(id: string) {
   const archived = isArchivedPath(path);
   const moveDestinations = listDocumentMoveDestinations(nodes, id);
   const directChildCounts = countActiveDirectChildren(nodes);
+  const visibleChildIds = nodes
+    .filter(
+      (node) => node.parentId === id && (archived || node.archivedAt === null),
+    )
+    .map((node) => node.id);
+  const tagAssignments = await listDocumentTagAssignments([id, ...visibleChildIds]);
+  const tagsByDocument = groupTagsByDocument(tagAssignments);
 
   const children = nodes
     .filter(
@@ -72,6 +134,7 @@ export async function getDocumentReadView(id: string) {
     .map((node) => ({
       ...node,
       childCount: directChildCounts.get(node.id) ?? 0,
+      tags: tagsByDocument.get(node.id) ?? [],
     }));
 
   function relatedDocument(relatedId: string) {
@@ -103,6 +166,8 @@ export async function getDocumentReadView(id: string) {
     moveDestinations,
     references,
     backlinks,
+    tags: tagsByDocument.get(id) ?? [],
+    availableTags: allTags,
   };
 }
 

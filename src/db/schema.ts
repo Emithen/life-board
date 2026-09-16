@@ -15,6 +15,8 @@ import { sql } from "drizzle-orm";
 import {
   DOCUMENT_CONTENT_MAX_LENGTH,
   DOCUMENT_TITLE_MAX_LENGTH,
+  TAG_COLORS,
+  TAG_NAME_MAX_LENGTH,
   TOPIC_DESCRIPTION_MAX_LENGTH,
   TOPIC_NAME_MAX_LENGTH,
 } from "@/features/content/model";
@@ -28,6 +30,8 @@ export const todoStatus = pgEnum("todo_status", [
   "completed",
   "archived",
 ]);
+
+export const tagColor = pgEnum("tag_color", TAG_COLORS);
 
 export const todos = pgTable(
   "todos",
@@ -156,5 +160,48 @@ export const documentReferences = pgTable(
   ],
 );
 
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    normalizedName: text("normalized_name").notNull(),
+    color: tagColor("color").notNull().default("gray"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      "tags_name_length_check",
+      sql`char_length(${table.name}) between 1 and ${sql.raw(String(TAG_NAME_MAX_LENGTH))}`,
+    ),
+    uniqueIndex("tags_normalized_name_uq").on(table.normalizedName),
+  ],
+);
+
+export const documentTags = pgTable(
+  "document_tags",
+  {
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("document_tags_document_tag_uq").on(
+      table.documentId,
+      table.tagId,
+    ),
+    index("document_tags_tag_id_idx").on(table.tagId),
+  ],
+);
+
 export type Topic = typeof topics.$inferSelect;
 export type Document = typeof documents.$inferSelect;
+export type Tag = typeof tags.$inferSelect;

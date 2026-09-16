@@ -6,6 +6,7 @@ import { initialContentActionState } from "@/features/content/model";
 import { moveDocument, updateDocumentFromDetail } from "./content-actions";
 import { DocumentFields } from "./document-fields";
 import { DocumentMarkdown } from "./document-markdown";
+import { TagBadge, type DocumentTag } from "./tag-badge";
 import styles from "./document-markdown.module.css";
 
 type DocumentEditorProps = {
@@ -18,12 +19,14 @@ type DocumentEditorProps = {
     parentId: string | null;
   };
   moveDestinations: { id: string; pathLabel: string }[];
+  tags: DocumentTag[];
   archived: boolean;
 };
 
 export function DocumentEditor({
   document,
   moveDestinations,
+  tags,
   archived,
 }: DocumentEditorProps) {
   const [mode, setMode] = useState<"read" | "edit" | "move">("read");
@@ -47,9 +50,12 @@ export function DocumentEditor({
         ) : null}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="break-words text-3xl font-semibold sm:text-4xl">
-              {document.title}
-            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="break-words text-3xl font-semibold sm:text-4xl">
+                {document.title}
+              </h1>
+              {tags.map((tag) => <TagBadge key={tag.id} tag={tag} />)}
+            </div>
             <p className="mt-3 text-xs text-neutral-500">
               {document.updatedAt} 수정
             </p>

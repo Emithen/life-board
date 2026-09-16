@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseDocumentInput, parseTopicInput } from "./validation";
+import { parseDocumentInput, parseTagInput, parseTopicInput } from "./validation";
 
 function formData(values: Record<string, string>) {
   const data = new FormData();
@@ -46,4 +46,24 @@ test("제목 없는 문서를 거부한다", () => {
   const result = parseDocumentInput(formData({ title: "", content: "메모" }));
   assert.equal(result.success, false);
   if (!result.success) assert.ok(result.fieldErrors.title);
+});
+
+test("태그 이름의 공백을 정규화하고 제한된 색상만 허용한다", () => {
+  const result = parseTagInput(
+    formData({ name: "  검토   필요  ", color: "amber" }),
+  );
+  assert.deepEqual(result, {
+    success: true,
+    data: {
+      name: "검토 필요",
+      normalizedName: "검토 필요",
+      color: "amber",
+    },
+  });
+});
+
+test("지원하지 않는 태그 색상을 거부한다", () => {
+  const result = parseTagInput(formData({ name: "포화", color: "orange" }));
+  assert.equal(result.success, false);
+  if (!result.success) assert.ok(result.fieldErrors.color);
 });

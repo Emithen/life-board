@@ -5,6 +5,7 @@ import { getDocumentReadView } from "@/features/content/read-repository";
 import { isValidContentId } from "@/features/content/validation";
 import { DocumentEditor } from "../../document-editor";
 import { ChildDocumentSection } from "../../child-document-section";
+import { DocumentTagManager } from "../../document-tag-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,8 @@ export default async function DocumentPage({
     moveDestinations,
     references,
     backlinks,
+    tags,
+    availableTags,
   } = view;
   return (
     <main className="min-h-screen bg-[#f7f7f4] px-5 py-6 text-neutral-950 sm:px-8 lg:px-12">
@@ -108,6 +111,7 @@ export default async function DocumentPage({
             parentId: document.parentId,
           }}
           moveDestinations={moveDestinations}
+          tags={tags}
           archived={archived}
         />
 
@@ -126,11 +130,18 @@ export default async function DocumentPage({
                 updatedAt: dateFormatter.format(child.updatedAt),
                 archived: archived || child.archivedAt !== null,
                 childCount: child.childCount,
+                tags: child.tags,
               }))}
             />
           </div>
 
           <div className="flex flex-col gap-4">
+            <DocumentTagManager
+              documentId={document.id}
+              assignedTags={tags}
+              availableTags={availableTags}
+              archived={archived}
+            />
             <RelatedDocuments title="참조하는 문서" items={references} />
             <RelatedDocuments title="이 문서를 참조하는 문서" items={backlinks} />
           </div>

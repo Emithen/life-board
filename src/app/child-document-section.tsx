@@ -12,6 +12,7 @@ import {
 import { initialContentActionState } from "@/features/content/model";
 import { createChildDocument } from "./content-actions";
 import { DocumentFields } from "./document-fields";
+import { TagBadge, type DocumentTag } from "./tag-badge";
 
 type ChildDocument = {
   id: string;
@@ -19,6 +20,7 @@ type ChildDocument = {
   updatedAt: string;
   archived: boolean;
   childCount: number;
+  tags: DocumentTag[];
 };
 
 function ChildDocumentCreateForm({
@@ -130,7 +132,11 @@ export function ChildDocumentSection({
                 href={`/documents/${item.id}`}
                 className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-neutral-50"
               >
-                <span className="min-w-0 break-words font-medium">{item.title}</span>
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="break-words font-medium">{item.title}</span>
+                  {item.tags.slice(0, 3).map((tag) => <TagBadge key={tag.id} tag={tag} />)}
+                  {item.tags.length > 3 ? <span className="text-xs text-neutral-400">+{item.tags.length - 3}</span> : null}
+                </span>
                 <span className="flex shrink-0 items-center gap-3 text-xs text-neutral-500">
                   {item.archived ? (
                     <span className="text-amber-700">보관됨</span>

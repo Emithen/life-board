@@ -1,10 +1,13 @@
 import {
   DOCUMENT_CONTENT_MAX_LENGTH,
   DOCUMENT_TITLE_MAX_LENGTH,
+  TAG_NAME_MAX_LENGTH,
   TOPIC_DESCRIPTION_MAX_LENGTH,
   TOPIC_NAME_MAX_LENGTH,
+  isTagColor,
   isTopicColor,
   type ContentFieldErrors,
+  type TagColor,
   type TopicColor,
 } from "./model";
 
@@ -18,6 +21,51 @@ function getString(formData: FormData, name: string) {
 
 export function isValidContentId(id: string) {
   return uuidPattern.test(id);
+}
+
+export function normalizeTagName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+export function parseTagInput(formData: FormData):
+  | {
+      success: true;
+      data: { name: string; normalizedName: string; color: TagColor };
+    }
+  | {
+      success: false;
+      fieldErrors: Partial<Record<"name" | "color", string>>;
+    } {
+  const nameValue = formData.get("name");
+  const colorValue = formData.get("color");
+  const name = normalizeTagName(
+    typeof nameValue === "string" ? nameValue : "",
+  );
+  const color = typeof colorValue === "string" ? colorValue : "";
+  const fieldErrors: Partial<Record<"name" | "color", string>> = {};
+
+  if (!name) {
+    fieldErrors.name = "태그 이름을 입력해 주세요.";
+  } else if (name.length > TAG_NAME_MAX_LENGTH) {
+    fieldErrors.name = `태그 이름은 ${TAG_NAME_MAX_LENGTH}자 이하여야 합니다.`;
+  }
+
+  if (!isTagColor(color)) {
+    fieldErrors.color = "사용할 수 있는 태그 색상을 선택해 주세요.";
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { success: false, fieldErrors };
+  }
+
+  return {
+    success: true,
+    data: {
+      name,
+      normalizedName: name.toLowerCase(),
+      color: color as TagColor,
+    },
+  };
 }
 
 export function parseTopicInput(formData: FormData) {

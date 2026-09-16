@@ -2,8 +2,8 @@ import "server-only";
 
 import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/db";
-import { documents, topics } from "@/db/schema";
-import type { TopicColor } from "./model";
+import { documentTags, documents, tags, topics } from "@/db/schema";
+import type { TagColor, TopicColor } from "./model";
 import {
   canMoveDocument,
   getDocumentPath,
@@ -20,6 +20,12 @@ export type TopicInput = {
 export type DocumentInput = {
   title: string;
   content: string | null;
+};
+
+export type TagInput = {
+  name: string;
+  normalizedName: string;
+  color: TagColor;
 };
 
 export async function insertRootDocument(input: DocumentInput) {
@@ -378,4 +384,65 @@ export async function moveDocumentInTreeById(
       .where(eq(topics.id, updated.topicId));
   }
   return Boolean(updated);
+}
+
+export async function createTagAndAttachToDocument(
+  documentId: string,
+  input: TagInput,
+) {
+  const document = await getEditableDocument(documentId);
+  if (!document) return "document-not-found" as const;
+
+  const [existingTag] = await db()
+    .select({ id: tags.id })
+    .from(tags)
+    .where(eq(tags.normalizedName, input.normalizedName))
+    .limit(1);
+  if (existingTag) return "duplicate-name" as const;
+
+  const [createdTag] = await db()
+    .insert(tags)
+    .values(input)
+    .returning({ id: tags.id });
+  if (!createdTag) return "failed" as const;
+
+  await db().insert(documentTags).values({
+    documentId,
+    tagId: createdTag.id,
+  });
+  return "created" as const;
+}
+
+export async function attachTagToDocument(documentId: string, tagId: string) {
+  const [document, tag] = await Promise.all([
+    getEditableDocument(documentId),
+    db()
+      .select({ id: tags.id })
+      .from(tags)
+      .where(eq(tags.id, tagId))
+      .limit(1),
+  ]);
+  if (!document || !tag[0]) return false;
+
+  await db()
+    .insert(documentTags)
+    .values({ documentId, tagId })
+    .onConflictDoNothing();
+  return true;
+}
+
+export async function detachTagFromDocument(documentId: string, tagId: string) {
+  const document = await getEditableDocument(documentId);
+  if (!document) return false;
+
+  const removed = await db()
+    .delete(documentTags)
+    .where(
+      and(
+        eq(documentTags.documentId, documentId),
+        eq(documentTags.tagId, tagId),
+      ),
+    )
+    .returning({ documentId: documentTags.documentId });
+  return removed.length > 0;
 }

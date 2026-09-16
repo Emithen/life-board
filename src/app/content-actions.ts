@@ -3,9 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isDatabaseConfigured } from "@/db";
-import type { ContentActionState } from "@/features/content/model";
+import type {
+  ContentActionState,
+  TagActionState,
+} from "@/features/content/model";
 import {
+  attachTagToDocument,
   archiveDocumentInTreeById,
+  createTagAndAttachToDocument,
+  detachTagFromDocument,
   insertChildDocument,
   insertDocument,
   insertRootDocument,
@@ -20,6 +26,7 @@ import {
 import {
   isValidContentId,
   parseDocumentInput,
+  parseTagInput,
   parseTopicInput,
 } from "@/features/content/validation";
 
@@ -363,4 +370,89 @@ export async function moveDocument(
     failureMessage: "문서를 이동하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     paths: ["/", `/documents/${id}`],
   });
+}
+
+export async function createAndAttachDocumentTag(
+  documentId: string,
+  _previousState: TagActionState,
+  formData: FormData,
+): Promise<TagActionState> {
+  if (!isValidContentId(documentId)) {
+    return { status: "error", message: "올바르지 않은 문서 요청입니다." };
+  }
+  const parsed = parseTagInput(formData);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "태그 정보를 확인해 주세요.",
+      fieldErrors: parsed.fieldErrors,
+    };
+  }
+  if (!isDatabaseConfigured()) {
+    return { status: "error", message: "데이터베이스 연결을 먼저 설정해 주세요." };
+  }
+
+  try {
+    const result = await createTagAndAttachToDocument(documentId, parsed.data);
+    if (result === "duplicate-name") {
+      return {
+        status: "error",
+        message: "같은 이름의 태그가 있습니다. 기존 태그를 선택해 주세요.",
+        fieldErrors: { name: "이미 사용 중인 태그 이름입니다." },
+      };
+    }
+    if (result !== "created") {
+      return { status: "error", message: "태그를 추가할 수 있는 문서를 찾지 못했습니다." };
+    }
+    revalidatePath("/");
+    revalidatePath(`/documents/${documentId}`);
+    return { status: "success", message: "태그를 만들고 문서에 추가했습니다." };
+  } catch (error) {
+    console.error("Tag creation failed", error);
+    return { status: "error", message: "태그를 만들지 못했습니다. 잠시 후 다시 시도해 주세요." };
+  }
+}
+
+export async function attachDocumentTag(
+  documentId: string,
+  _previousState: TagActionState,
+  formData: FormData,
+): Promise<TagActionState> {
+  const tagId = formData.get("tagId");
+  if (
+    !isValidContentId(documentId) ||
+    typeof tagId !== "string" ||
+    !isValidContentId(tagId)
+  ) {
+    return { status: "error", message: "추가할 태그를 선택해 주세요." };
+  }
+  if (!isDatabaseConfigured()) {
+    return { status: "error", message: "데이터베이스 연결을 먼저 설정해 주세요." };
+  }
+
+  try {
+    if (!(await attachTagToDocument(documentId, tagId))) {
+      return { status: "error", message: "태그를 추가할 수 없습니다." };
+    }
+    revalidatePath("/");
+    revalidatePath(`/documents/${documentId}`);
+    return { status: "success", message: "태그를 추가했습니다." };
+  } catch (error) {
+    console.error("Tag attachment failed", error);
+    return { status: "error", message: "태그를 추가하지 못했습니다. 잠시 후 다시 시도해 주세요." };
+  }
+}
+
+export async function removeDocumentTag(documentId: string, tagId: string) {
+  if (!isValidContentId(documentId) || !isValidContentId(tagId)) return;
+  if (!isDatabaseConfigured()) return;
+
+  try {
+    if (await detachTagFromDocument(documentId, tagId)) {
+      revalidatePath("/");
+      revalidatePath(`/documents/${documentId}`);
+    }
+  } catch (error) {
+    console.error("Tag removal failed", error);
+  }
 }
