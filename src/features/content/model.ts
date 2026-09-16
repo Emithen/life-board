@@ -28,7 +28,16 @@ export type TopicColor = (typeof TOPIC_COLORS)[number];
 export type TagColor = (typeof TAG_COLORS)[number];
 export type NodeType = (typeof NODE_TYPES)[number];
 export type ContentFieldErrors = Partial<
-  Record<"name" | "description" | "color" | "title" | "content", string>
+  Record<
+    | "name"
+    | "description"
+    | "color"
+    | "title"
+    | "content"
+    | "nodeType"
+    | "targetDocumentId",
+    string
+  >
 >;
 
 export type ContentActionState = {
@@ -63,4 +72,8 @@ export function isTagColor(value: string): value is TagColor {
 
 export function isNodeType(value: string): value is NodeType {
   return NODE_TYPES.includes(value as NodeType);
+}
+
+export function canNodeContainChildren(nodeType: NodeType) {
+  return nodeType === "structure";
 }

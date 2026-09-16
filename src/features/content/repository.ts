@@ -1,13 +1,22 @@
 import "server-only";
 
-import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, desc, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import { db, isDatabaseConfigured } from "@/db";
-import { documentTags, documents, tags, topics } from "@/db/schema";
-import type { TagColor, TopicColor } from "./model";
+import {
+  documentReferences,
+  documentTags,
+  documents,
+  tags,
+  topics,
+} from "@/db/schema";
+import type { NodeType, TagColor, TopicColor } from "./model";
 import {
   canMoveDocument,
   getDocumentPath,
   isArchivedPath,
+  listReferenceMoveDestinations,
+  listReferenceTargets,
   type DocumentNode,
 } from "./tree";
 
@@ -22,13 +31,17 @@ export type DocumentInput = {
   content: string | null;
 };
 
+export type DocumentCreateInput = DocumentInput & {
+  nodeType: Exclude<NodeType, "reference">;
+};
+
 export type TagInput = {
   name: string;
   normalizedName: string;
   color: TagColor;
 };
 
-export async function insertRootDocument(input: DocumentInput) {
+export async function insertRootDocument(input: DocumentCreateInput) {
   const [created] = await db()
     .insert(documents)
     .values(input)
@@ -182,6 +195,7 @@ export async function updateDocumentById(
       and(
         eq(documents.id, id),
         eq(documents.topicId, topicId),
+        ne(documents.nodeType, "reference"),
         isNull(documents.archivedAt),
       ),
     )
@@ -223,8 +237,10 @@ async function getEditableDocument(id: string) {
     db()
       .select({
         id: documents.id,
+        parentId: documents.parentId,
         topicId: documents.topicId,
         legacyTopicId: documents.legacyTopicId,
+        nodeType: documents.nodeType,
       })
       .from(documents)
       .where(eq(documents.id, id))
@@ -259,7 +275,7 @@ export async function updateDocumentInTreeById(
   input: DocumentInput,
 ) {
   const document = await getEditableDocument(id);
-  if (!document) return false;
+  if (!document || document.nodeType === "reference") return false;
   const updatedAt = new Date();
 
   if (document.legacyTopicId) {
@@ -291,46 +307,52 @@ export async function updateDocumentInTreeById(
   return updated.length > 0;
 }
 
-export async function archiveDocumentInTreeById(id: string) {
+export async function updateDocumentNodeType(
+  id: string,
+  nodeType: Exclude<NodeType, "reference">,
+) {
   const document = await getEditableDocument(id);
-  if (!document) return false;
+  if (!document || document.nodeType === "reference") {
+    return "not-found" as const;
+  }
+
+  if (nodeType === "concept") {
+    const [child] = await db()
+      .select({ id: documents.id })
+      .from(documents)
+      .where(eq(documents.parentId, id))
+      .limit(1);
+    if (child) return "has-children" as const;
+  }
+
   const updatedAt = new Date();
-
-  if (document.legacyTopicId) {
-    const updated = await db()
-      .update(topics)
-      .set({ archivedAt: updatedAt, updatedAt })
-      .where(
-        and(
-          eq(topics.id, document.legacyTopicId),
-          isNull(topics.archivedAt),
-        ),
-      )
-      .returning({ id: topics.id });
-    return updated.length > 0;
-  }
-
-  const updated = await db()
+  const database = db();
+  const updateDocumentQuery = database
     .update(documents)
-    .set({ archivedAt: updatedAt, updatedAt })
-    .where(and(eq(documents.id, id), isNull(documents.archivedAt)))
-    .returning({ id: documents.id });
+    .set({ nodeType, updatedAt })
+    .where(and(eq(documents.id, id), isNull(documents.archivedAt)));
+  const topicId = document.topicId ?? document.legacyTopicId;
 
-  if (updated.length > 0 && document.topicId) {
-    await db()
-      .update(topics)
-      .set({ updatedAt })
-      .where(eq(topics.id, document.topicId));
+  if (topicId) {
+    await database.batch([
+      updateDocumentQuery,
+      database
+        .update(topics)
+        .set({ updatedAt })
+        .where(eq(topics.id, topicId)),
+    ]);
+  } else {
+    await updateDocumentQuery;
   }
-  return updated.length > 0;
+  return "updated" as const;
 }
 
 export async function insertChildDocument(
   parentId: string,
-  input: DocumentInput,
+  input: DocumentCreateInput,
 ) {
   const parent = await getEditableDocument(parentId);
-  if (!parent) return null;
+  if (!parent || parent.nodeType !== "structure") return null;
 
   const topicId = parent.topicId ?? parent.legacyTopicId;
   const updatedAt = new Date();
@@ -353,6 +375,197 @@ export async function insertChildDocument(
   return created?.id ?? null;
 }
 
+export async function insertReferenceDocument(
+  parentId: string,
+  targetDocumentId: string,
+) {
+  const parent = await getEditableDocument(parentId);
+  if (!parent || parent.nodeType !== "structure") return null;
+
+  const nodes = await db()
+    .select({
+      id: documents.id,
+      parentId: documents.parentId,
+      nodeType: documents.nodeType,
+      title: documents.title,
+      archivedAt: documents.archivedAt,
+      updatedAt: documents.updatedAt,
+      accentColor: documents.accentColor,
+      legacyTopicId: documents.legacyTopicId,
+    })
+    .from(documents);
+  const target = listReferenceTargets(nodes, parentId).find(
+    (candidate) => candidate.id === targetDocumentId,
+  );
+  if (!target) return null;
+
+  const topicId = parent.topicId ?? parent.legacyTopicId;
+  const updatedAt = new Date();
+  const createdId = randomUUID();
+  const database = db();
+  const insertDocumentQuery = database.insert(documents).values({
+    id: createdId,
+    parentId,
+    topicId,
+    nodeType: "reference",
+    title: target.title,
+    content: null,
+    updatedAt,
+  });
+  const insertReferenceQuery = database.insert(documentReferences).values({
+    sourceDocumentId: createdId,
+    targetDocumentId,
+  });
+
+  if (topicId) {
+    await database.batch([
+      insertDocumentQuery,
+      insertReferenceQuery,
+      database
+        .update(topics)
+        .set({ updatedAt })
+        .where(eq(topics.id, topicId)),
+    ]);
+  } else {
+    await database.batch([insertDocumentQuery, insertReferenceQuery]);
+  }
+
+  return createdId;
+}
+
+export async function updateReferenceDocumentTarget(
+  referenceDocumentId: string,
+  targetDocumentId: string,
+) {
+  const referenceDocument = await getEditableDocument(referenceDocumentId);
+  if (
+    !referenceDocument ||
+    referenceDocument.nodeType !== "reference" ||
+    !referenceDocument.parentId
+  ) {
+    return null;
+  }
+
+  const nodes = await db()
+    .select({
+      id: documents.id,
+      parentId: documents.parentId,
+      nodeType: documents.nodeType,
+      title: documents.title,
+      archivedAt: documents.archivedAt,
+      updatedAt: documents.updatedAt,
+      accentColor: documents.accentColor,
+      legacyTopicId: documents.legacyTopicId,
+    })
+    .from(documents);
+  const target = listReferenceTargets(
+    nodes,
+    referenceDocument.parentId,
+  ).find((candidate) => candidate.id === targetDocumentId);
+  if (!target) return null;
+
+  const [currentReference] = await db()
+    .select({ targetDocumentId: documentReferences.targetDocumentId })
+    .from(documentReferences)
+    .where(eq(documentReferences.sourceDocumentId, referenceDocumentId))
+    .limit(1);
+  const updatedAt = new Date();
+  const database = db();
+  const queries = [
+    database
+      .delete(documentReferences)
+      .where(eq(documentReferences.sourceDocumentId, referenceDocumentId)),
+    database.insert(documentReferences).values({
+      sourceDocumentId: referenceDocumentId,
+      targetDocumentId,
+    }),
+    database
+      .update(documents)
+      .set({ title: target.title, content: null, updatedAt })
+      .where(eq(documents.id, referenceDocumentId)),
+  ] as const;
+
+  const topicId = referenceDocument.topicId ?? referenceDocument.legacyTopicId;
+  if (topicId) {
+    await database.batch([
+      ...queries,
+      database
+        .update(topics)
+        .set({ updatedAt })
+        .where(eq(topics.id, topicId)),
+    ]);
+  } else {
+    await database.batch(queries);
+  }
+
+  return { previousTargetDocumentId: currentReference?.targetDocumentId ?? null };
+}
+
+export async function deleteReferenceDocumentById(referenceDocumentId: string) {
+  const referenceDocument = await getEditableDocument(referenceDocumentId);
+  if (!referenceDocument || referenceDocument.nodeType !== "reference") {
+    return { status: "not-found" as const };
+  }
+
+  const [child, incomingReference, outgoingReference] = await Promise.all([
+    db()
+      .select({ id: documents.id })
+      .from(documents)
+      .where(eq(documents.parentId, referenceDocumentId))
+      .limit(1),
+    db()
+      .select({ sourceDocumentId: documentReferences.sourceDocumentId })
+      .from(documentReferences)
+      .where(eq(documentReferences.targetDocumentId, referenceDocumentId))
+      .limit(1),
+    db()
+      .select({ targetDocumentId: documentReferences.targetDocumentId })
+      .from(documentReferences)
+      .where(eq(documentReferences.sourceDocumentId, referenceDocumentId))
+      .limit(1),
+  ]);
+  if (child[0]) return { status: "has-children" as const };
+  if (incomingReference[0]) return { status: "has-incoming-reference" as const };
+
+  const database = db();
+  const updatedAt = new Date();
+  const deleteQueries = [
+    database
+      .delete(documentTags)
+      .where(eq(documentTags.documentId, referenceDocumentId)),
+    database
+      .delete(documentReferences)
+      .where(eq(documentReferences.sourceDocumentId, referenceDocumentId)),
+    database
+      .delete(documents)
+      .where(
+        and(
+          eq(documents.id, referenceDocumentId),
+          eq(documents.nodeType, "reference"),
+        ),
+      ),
+  ] as const;
+  const topicId = referenceDocument.topicId ?? referenceDocument.legacyTopicId;
+
+  if (topicId) {
+    await database.batch([
+      ...deleteQueries,
+      database
+        .update(topics)
+        .set({ updatedAt })
+        .where(eq(topics.id, topicId)),
+    ]);
+  } else {
+    await database.batch(deleteQueries);
+  }
+
+  return {
+    status: "deleted" as const,
+    parentId: referenceDocument.parentId,
+    targetDocumentId: outgoingReference[0]?.targetDocumentId ?? null,
+  };
+}
+
 export async function moveDocumentInTreeById(
   id: string,
   parentId: string | null,
@@ -371,6 +584,26 @@ export async function moveDocumentInTreeById(
     .from(documents);
 
   if (!canMoveDocument(nodes, id, parentId)) return false;
+
+  const source = nodes.find((node) => node.id === id);
+  if (source?.nodeType === "reference") {
+    if (!parentId) return false;
+    const [relation] = await db()
+      .select({ targetDocumentId: documentReferences.targetDocumentId })
+      .from(documentReferences)
+      .where(eq(documentReferences.sourceDocumentId, id))
+      .limit(1);
+    if (
+      !relation ||
+      !listReferenceMoveDestinations(
+        nodes,
+        id,
+        relation.targetDocumentId,
+      ).some((destination) => destination.id === parentId)
+    ) {
+      return false;
+    }
+  }
 
   const updatedAt = new Date();
   const [updated] = await db()
@@ -393,7 +626,9 @@ export async function createTagAndAttachToDocument(
   input: TagInput,
 ) {
   const document = await getEditableDocument(documentId);
-  if (!document) return "document-not-found" as const;
+  if (!document || document.nodeType === "reference") {
+    return "document-not-found" as const;
+  }
 
   const [existingTag] = await db()
     .select({ id: tags.id })
@@ -424,7 +659,7 @@ export async function attachTagToDocument(documentId: string, tagId: string) {
       .where(eq(tags.id, tagId))
       .limit(1),
   ]);
-  if (!document || !tag[0]) return false;
+  if (!document || document.nodeType === "reference" || !tag[0]) return false;
 
   await db()
     .insert(documentTags)

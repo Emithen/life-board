@@ -14,6 +14,8 @@ import {
   getDocumentPath,
   isArchivedPath,
   listDocumentMoveDestinations,
+  listReferenceMoveDestinations,
+  listReferenceTargets,
   summarizeRootDocuments,
   type DocumentNode,
 } from "./tree";
@@ -89,21 +91,9 @@ export async function getDocumentReadView(id: string) {
     return { configured: false, document: null };
   }
 
-  const [rows, nodes, relations, allTags] = await Promise.all([
+  const [rows, nodes, allTags] = await Promise.all([
     db().select().from(documents).where(eq(documents.id, id)).limit(1),
     listDocumentNodes(),
-    db()
-      .select({
-        sourceId: documentReferences.sourceDocumentId,
-        targetId: documentReferences.targetDocumentId,
-      })
-      .from(documentReferences)
-      .where(
-        or(
-          eq(documentReferences.sourceDocumentId, id),
-          eq(documentReferences.targetDocumentId, id),
-        ),
-      ),
     db()
       .select({ id: tags.id, name: tags.name, color: tags.color })
       .from(tags)
@@ -117,15 +107,61 @@ export async function getDocumentReadView(id: string) {
   const path = getDocumentPath(byId, id);
   if (!path) throw new Error(`Document ${id} has an invalid parent chain.`);
   const archived = isArchivedPath(path);
-  const moveDestinations = listDocumentMoveDestinations(nodes, id);
   const directChildCounts = countActiveDirectChildren(nodes);
   const visibleChildIds = nodes
     .filter(
       (node) => node.parentId === id && (archived || node.archivedAt === null),
     )
     .map((node) => node.id);
-  const tagAssignments = await listDocumentTagAssignments([id, ...visibleChildIds]);
+  const relationPredicates = [
+    eq(documentReferences.sourceDocumentId, id),
+    eq(documentReferences.targetDocumentId, id),
+  ];
+  if (visibleChildIds.length > 0) {
+    relationPredicates.push(
+      inArray(documentReferences.sourceDocumentId, visibleChildIds),
+    );
+  }
+  const [tagAssignments, relations] = await Promise.all([
+    listDocumentTagAssignments([id, ...visibleChildIds]),
+    db()
+      .select({
+        sourceId: documentReferences.sourceDocumentId,
+        targetId: documentReferences.targetDocumentId,
+      })
+      .from(documentReferences)
+      .where(or(...relationPredicates)),
+  ]);
   const tagsByDocument = groupTagsByDocument(tagAssignments);
+
+  function relatedDocument(relatedId: string) {
+    const node = byId.get(relatedId);
+    if (!node) return null;
+    const relatedPath = getDocumentPath(byId, relatedId);
+    return {
+      id: node.id,
+      title: node.title,
+      nodeType: node.nodeType,
+      pathLabel: relatedPath?.map((pathNode) => pathNode.title).join(" / ") ?? node.title,
+      archived: !relatedPath || isArchivedPath(relatedPath),
+    };
+  }
+
+  const referenceTargetBySource = new Map(
+    relations.map((relation) => [
+      relation.sourceId,
+      relatedDocument(relation.targetId),
+    ]),
+  );
+  const currentReferenceTargetId = relations.find(
+    (relation) => relation.sourceId === id,
+  )?.targetId;
+  const moveDestinations =
+    document.nodeType === "reference"
+      ? currentReferenceTargetId
+        ? listReferenceMoveDestinations(nodes, id, currentReferenceTargetId)
+        : []
+      : listDocumentMoveDestinations(nodes, id);
 
   const children = nodes
     .filter(
@@ -135,19 +171,9 @@ export async function getDocumentReadView(id: string) {
     .map((node) => ({
       ...node,
       childCount: directChildCounts.get(node.id) ?? 0,
+      referenceTarget: referenceTargetBySource.get(node.id) ?? null,
       tags: tagsByDocument.get(node.id) ?? [],
     }));
-
-  function relatedDocument(relatedId: string) {
-    const node = byId.get(relatedId);
-    if (!node) return null;
-    const relatedPath = getDocumentPath(byId, relatedId);
-    return {
-      id: node.id,
-      title: node.title,
-      archived: !relatedPath || isArchivedPath(relatedPath),
-    };
-  }
 
   const references = relations
     .filter((relation) => relation.sourceId === id)
@@ -165,6 +191,12 @@ export async function getDocumentReadView(id: string) {
     archived,
     children,
     moveDestinations,
+    referenceTargets: listReferenceTargets(
+      nodes,
+      document.nodeType === "reference" && document.parentId
+        ? document.parentId
+        : id,
+    ),
     references,
     backlinks,
     tags: tagsByDocument.get(id) ?? [],

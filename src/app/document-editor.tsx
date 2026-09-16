@@ -1,15 +1,20 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { FolderInput, LoaderCircle, Pencil, X } from "lucide-react";
+import { FolderInput, Layers2, LoaderCircle, Pencil, X } from "lucide-react";
 import {
   initialContentActionState,
   type NodeType,
 } from "@/features/content/model";
-import { moveDocument, updateDocumentFromDetail } from "./content-actions";
+import {
+  changeDocumentNodeType,
+  moveDocument,
+  updateDocumentFromDetail,
+} from "./content-actions";
 import { DocumentFields } from "./document-fields";
 import { DocumentMarkdown } from "./document-markdown";
 import { NodeTypeBadge } from "./node-type-badge";
+import { NodeTypeFields } from "./node-type-fields";
 import { TagBadge, type DocumentTag } from "./tag-badge";
 import styles from "./document-markdown.module.css";
 
@@ -34,13 +39,17 @@ export function DocumentEditor({
   tags,
   archived,
 }: DocumentEditorProps) {
-  const [mode, setMode] = useState<"read" | "edit" | "move">("read");
+  const [mode, setMode] = useState<"read" | "edit" | "move" | "type">("read");
   const [updateState, updateAction, updating] = useActionState(
     updateDocumentFromDetail.bind(null, document.id),
     initialContentActionState,
   );
   const [moveState, moveAction, moving] = useActionState(
     moveDocument.bind(null, document.id),
+    initialContentActionState,
+  );
+  const [typeState, typeAction, changingType] = useActionState(
+    changeDocumentNodeType.bind(null, document.id),
     initialContentActionState,
   );
 
@@ -68,13 +77,24 @@ export function DocumentEditor({
           </div>
           {!archived && mode === "read" ? (
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setMode("edit")}
-                className="inline-flex h-10 items-center gap-2 border border-neutral-300 bg-white px-3 text-sm hover:border-neutral-950"
-              >
-                <Pencil size={15} aria-hidden="true" /> 편집
-              </button>
+              {document.nodeType !== "reference" ? (
+                <button
+                  type="button"
+                  onClick={() => setMode("edit")}
+                  className="inline-flex h-10 items-center gap-2 border border-neutral-300 bg-white px-3 text-sm hover:border-neutral-950"
+                >
+                  <Pencil size={15} aria-hidden="true" /> 편집
+                </button>
+              ) : null}
+              {document.nodeType !== "reference" ? (
+                <button
+                  type="button"
+                  onClick={() => setMode("type")}
+                  className="inline-flex h-10 items-center gap-2 border border-neutral-300 bg-white px-3 text-sm hover:border-neutral-950"
+                >
+                  <Layers2 size={15} aria-hidden="true" /> 유형 변경
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setMode("move")}
@@ -87,10 +107,12 @@ export function DocumentEditor({
         </div>
       </header>
 
-      <section
+      {mode !== "read" || document.nodeType !== "reference" ? <section
         aria-label={
           mode === "edit"
             ? "문서 편집"
+            : mode === "type"
+              ? "노드 유형 변경"
             : mode === "move"
               ? "문서 이동"
               : "문서 본문"
@@ -139,6 +161,51 @@ export function DocumentEditor({
               </button>
             </div>
           </form>
+        ) : mode === "type" && document.nodeType !== "reference" ? (
+          <form action={typeAction} className="grid gap-4">
+            <NodeTypeFields
+              idPrefix={`change-document-type-${document.id}`}
+              defaultValue={document.nodeType}
+              error={typeState.fieldErrors?.nodeType}
+            />
+            <p className="text-xs text-neutral-500">
+              하위 구성 요소가 있는 구조 노드는 개념으로 변경할 수 없습니다.
+            </p>
+            {typeState.message ? (
+              <p
+                aria-live="polite"
+                className={
+                  typeState.status === "error"
+                    ? "text-sm text-red-700"
+                    : "text-sm text-emerald-700"
+                }
+              >
+                {typeState.message}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={changingType}
+                onClick={() => setMode("read")}
+                className="inline-flex h-10 items-center gap-2 border border-neutral-200 px-3 text-sm"
+              >
+                <X size={15} aria-hidden="true" /> 취소
+              </button>
+              <button
+                type="submit"
+                disabled={changingType}
+                className="inline-flex h-10 items-center gap-2 bg-neutral-950 px-4 text-sm font-medium text-white disabled:bg-neutral-400"
+              >
+                {changingType ? (
+                  <LoaderCircle size={15} className="animate-spin" aria-hidden="true" />
+                ) : (
+                  <Layers2 size={15} aria-hidden="true" />
+                )}
+                {changingType ? "변경 중..." : "유형 변경"}
+              </button>
+            </div>
+          </form>
         ) : mode === "move" ? (
           <form action={moveAction} className="grid gap-4">
             <div>
@@ -151,7 +218,9 @@ export function DocumentEditor({
                 defaultValue={document.parentId ?? ""}
                 className="mt-2 h-11 w-full border border-neutral-300 bg-white px-3 text-sm outline-none focus:border-emerald-700"
               >
-                <option value="">문서 목록에 바로 표시</option>
+                {document.nodeType !== "reference" ? (
+                  <option value="">문서 목록에 바로 표시</option>
+                ) : null}
                 {moveDestinations.map((destination) => (
                   <option key={destination.id} value={destination.id}>
                     {destination.pathLabel}
@@ -159,7 +228,9 @@ export function DocumentEditor({
                 ))}
               </select>
               <p className="mt-2 text-xs text-neutral-500">
-                선택한 문서 안으로 현재 문서와 모든 하위 문서가 함께 이동합니다.
+                {document.nodeType === "reference"
+                  ? "현재 참조 대상을 사용할 수 있는 구조 노드만 표시됩니다."
+                  : "선택한 문서 안으로 현재 문서와 모든 하위 문서가 함께 이동합니다."}
               </p>
             </div>
             {moveState.message ? (
@@ -204,7 +275,7 @@ export function DocumentEditor({
         ) : (
           <p className="text-sm text-neutral-400">아직 작성된 본문이 없습니다.</p>
         )}
-      </section>
+      </section> : null}
     </>
   );
 }

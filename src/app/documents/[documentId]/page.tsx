@@ -6,6 +6,7 @@ import { isValidContentId } from "@/features/content/validation";
 import { DocumentEditor } from "../../document-editor";
 import { ChildDocumentSection } from "../../child-document-section";
 import { DocumentTagManager } from "../../document-tag-manager";
+import { ReferenceTargetManager } from "../../reference-target-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -69,11 +70,13 @@ export default async function DocumentPage({
     archived,
     children,
     moveDestinations,
+    referenceTargets,
     references,
     backlinks,
     tags,
     availableTags,
   } = view;
+  const referenceTarget = references[0] ?? null;
   return (
     <main className="min-h-screen bg-[#f7f7f4] px-5 py-6 text-neutral-950 sm:px-8 lg:px-12">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
@@ -87,11 +90,15 @@ export default async function DocumentPage({
           ) : null}
           {path.map((node, index) => {
             const hiddenOnMobile = path.length > 2 && index < path.length - 2;
+            const title =
+              index === path.length - 1 && document.nodeType === "reference"
+                ? referenceTarget?.title ?? node.title
+                : node.title;
             return (
               <span key={node.id} className={`${hiddenOnMobile ? "hidden sm:inline-flex" : "inline-flex"} min-w-0 items-center gap-1`}>
                 <ChevronRight size={14} aria-hidden="true" />
                 {index === path.length - 1 ? (
-                  <span aria-current="page" className="max-w-36 truncate text-neutral-950 sm:max-w-56">{node.title}</span>
+                  <span aria-current="page" className="max-w-36 truncate text-neutral-950 sm:max-w-56">{title}</span>
                 ) : (
                   <Link href={`/documents/${node.id}`} className="max-w-36 truncate hover:text-emerald-700 sm:max-w-56">{node.title}</Link>
                 )}
@@ -104,15 +111,18 @@ export default async function DocumentPage({
           key={document.updatedAt.toISOString()}
           document={{
             id: document.id,
-            title: document.title,
-            content: document.content,
+            title:
+              document.nodeType === "reference"
+                ? referenceTarget?.title ?? document.title
+                : document.title,
+            content: document.nodeType === "reference" ? null : document.content,
             accentColor: document.accentColor,
             updatedAt: dateFormatter.format(document.updatedAt),
             parentId: document.parentId,
             nodeType: document.nodeType,
           }}
           moveDestinations={moveDestinations}
-          tags={tags}
+          tags={document.nodeType === "reference" ? [] : tags}
           archived={archived}
         />
 
@@ -120,19 +130,42 @@ export default async function DocumentPage({
           <p className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">보관된 문서입니다. 상위 문서가 보관된 경우에도 이 문서는 읽을 수 있습니다.</p>
         ) : null}
 
+        {document.nodeType === "reference" ? (
+          <ReferenceTargetManager
+            referenceDocumentId={document.id}
+            target={referenceTarget}
+            targets={referenceTargets}
+            archived={archived}
+          />
+        ) : null}
+
+        {document.nodeType !== "reference" ? (
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex flex-col gap-6">
             <ChildDocumentSection
               parentId={document.id}
+              parentNodeType={document.nodeType}
               archived={archived}
+              referenceTargets={referenceTargets}
               items={children.map((child) => ({
                 id: child.id,
-                title: child.title,
+                title: child.referenceTarget?.title ?? child.title,
                 updatedAt: dateFormatter.format(child.updatedAt),
-                archived: archived || child.archivedAt !== null,
+                updatedAtValue: child.updatedAt.getTime(),
+                archived:
+                  archived ||
+                  child.archivedAt !== null ||
+                  Boolean(child.referenceTarget?.archived),
                 childCount: child.childCount,
                 nodeType: child.nodeType,
-                tags: child.tags,
+                referenceTarget: child.referenceTarget
+                  ? {
+                      id: child.referenceTarget.id,
+                      title: child.referenceTarget.title,
+                      archived: child.referenceTarget.archived,
+                    }
+                  : null,
+                tags: child.nodeType === "reference" ? [] : child.tags,
               }))}
             />
           </div>
@@ -148,6 +181,7 @@ export default async function DocumentPage({
             <RelatedDocuments title="이 문서를 참조하는 문서" items={backlinks} />
           </div>
         </div>
+        ) : null}
       </div>
     </main>
   );

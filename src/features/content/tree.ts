@@ -40,6 +40,66 @@ export type DocumentMoveDestination = {
   pathLabel: string;
 };
 
+export type ReferenceTarget = DocumentMoveDestination & {
+  nodeType: Exclude<NodeType, "reference">;
+};
+
+export function listReferenceTargets(
+  nodes: DocumentNode[],
+  sourceParentId: string,
+): ReferenceTarget[] {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const sourcePath = getDocumentPath(byId, sourceParentId);
+  if (
+    !sourcePath ||
+    isArchivedPath(sourcePath) ||
+    sourcePath.at(-1)?.nodeType !== "structure"
+  ) {
+    return [];
+  }
+
+  const visibleConceptParentIds = new Set(sourcePath.map((node) => node.id));
+
+  return nodes
+    .flatMap((node) => {
+      if (node.id === sourceParentId || node.nodeType === "reference") return [];
+      const path = getDocumentPath(byId, node.id);
+      if (!path || isArchivedPath(path)) return [];
+
+      const conceptIsVisible =
+        node.nodeType !== "concept" ||
+        node.parentId === null ||
+        visibleConceptParentIds.has(node.parentId);
+      if (!conceptIsVisible) return [];
+
+      return [{
+        id: node.id,
+        title: node.title,
+        pathLabel: path.map((pathNode) => pathNode.title).join(" / "),
+        nodeType: node.nodeType,
+      }];
+    })
+    .sort((a, b) => a.pathLabel.localeCompare(b.pathLabel, "ko"));
+}
+
+export function listReferenceMoveDestinations(
+  nodes: DocumentNode[],
+  referenceDocumentId: string,
+  targetDocumentId: string,
+) {
+  const referenceDocument = nodes.find(
+    (node) => node.id === referenceDocumentId,
+  );
+  if (referenceDocument?.nodeType !== "reference") return [];
+
+  return listDocumentMoveDestinations(nodes, referenceDocumentId).filter(
+    (destination) =>
+      listReferenceTargets(nodes, destination.id).some(
+        (target) => target.id === targetDocumentId,
+      ),
+  );
+}
+
 export function listDocumentMoveDestinations(
   nodes: DocumentNode[],
   documentId: string,
@@ -54,6 +114,7 @@ export function listDocumentMoveDestinations(
       if (
         !path ||
         isArchivedPath(path) ||
+        node.nodeType !== "structure" ||
         path.some((pathNode) => pathNode.id === documentId)
       ) {
         return [];

@@ -9,23 +9,29 @@ import type {
 } from "@/features/content/model";
 import {
   attachTagToDocument,
-  archiveDocumentInTreeById,
   createTagAndAttachToDocument,
+  deleteReferenceDocumentById,
   detachTagFromDocument,
   insertChildDocument,
   insertDocument,
+  insertReferenceDocument,
   insertRootDocument,
   insertTopic,
   moveDocumentInTreeById,
   setDocumentArchived,
   setTopicArchived,
   updateDocumentInTreeById,
+  updateDocumentNodeType,
+  updateReferenceDocumentTarget,
   updateDocumentById,
   updateTopicById,
 } from "@/features/content/repository";
 import {
   isValidContentId,
+  parseDocumentCreateInput,
   parseDocumentInput,
+  parseEditableNodeTypeInput,
+  parseReferenceCreateInput,
   parseTagInput,
   parseTopicInput,
 } from "@/features/content/validation";
@@ -264,22 +270,37 @@ export async function updateDocumentFromDetail(
   });
 }
 
-export async function archiveDocumentFromDetail(
+export async function changeDocumentNodeType(
   id: string,
   _previousState: ContentActionState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<ContentActionState> {
-  void _previousState;
-  void _formData;
   if (!isValidContentId(id)) return errorState("올바르지 않은 문서 요청입니다.");
+  const parsed = parseEditableNodeTypeInput(formData);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "변경할 유형을 확인해 주세요.",
+      fieldErrors: parsed.fieldErrors,
+    };
+  }
+  if (!isDatabaseConfigured()) return databaseErrorState();
 
-  return runContentMutation({
-    mutate: () => archiveDocumentInTreeById(id),
-    successMessage: "문서를 보관했습니다.",
-    notFoundMessage: "보관할 수 있는 문서를 찾을 수 없습니다.",
-    failureMessage: "문서를 보관하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-    paths: ["/", `/documents/${id}`],
-  });
+  try {
+    const result = await updateDocumentNodeType(id, parsed.data.nodeType);
+    if (result === "has-children") {
+      return errorState("하위 구성 요소가 있는 구조 노드는 개념으로 변경할 수 없습니다.");
+    }
+    if (result !== "updated") {
+      return errorState("유형을 변경할 수 있는 노드를 찾지 못했습니다.");
+    }
+    revalidatePath("/");
+    revalidatePath(`/documents/${id}`);
+    return { status: "success", message: "노드 유형을 변경했습니다." };
+  } catch (error) {
+    console.error("Document node type update failed", error);
+    return errorState("노드 유형을 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
 }
 
 export async function createChildDocument(
@@ -290,7 +311,7 @@ export async function createChildDocument(
   if (!isValidContentId(parentId)) {
     return errorState("올바르지 않은 상위 문서 요청입니다.");
   }
-  const parsed = parseDocumentInput(formData);
+  const parsed = parseDocumentCreateInput(formData);
   if (!parsed.success) {
     return {
       status: "error",
@@ -321,7 +342,7 @@ export async function createRootDocument(
   _previousState: ContentActionState,
   formData: FormData,
 ): Promise<ContentActionState> {
-  const parsed = parseDocumentInput(formData);
+  const parsed = parseDocumentCreateInput(formData);
   if (!parsed.success) {
     return {
       status: "error",
@@ -345,6 +366,125 @@ export async function createRootDocument(
 
   revalidatePath("/");
   redirect(`/documents/${createdId}`);
+}
+
+export async function createReferenceDocument(
+  parentId: string,
+  _previousState: ContentActionState,
+  formData: FormData,
+): Promise<ContentActionState> {
+  if (!isValidContentId(parentId)) {
+    return errorState("올바르지 않은 상위 문서 요청입니다.");
+  }
+  const parsed = parseReferenceCreateInput(formData);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "참조 대상을 확인해 주세요.",
+      fieldErrors: parsed.fieldErrors,
+    };
+  }
+  if (!isDatabaseConfigured()) return databaseErrorState();
+
+  let createdId: string | null;
+  try {
+    createdId = await insertReferenceDocument(
+      parentId,
+      parsed.data.targetDocumentId,
+    );
+  } catch (error) {
+    console.error("Reference document creation failed", error);
+    return errorState("참조 노드를 만들지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
+  if (!createdId) {
+    return errorState("현재 경로에서 참조할 수 있는 대상을 찾지 못했습니다.");
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/documents/${parentId}`);
+  revalidatePath(`/documents/${parsed.data.targetDocumentId}`);
+  redirect(`/documents/${createdId}`);
+}
+
+export async function updateReferenceTarget(
+  referenceDocumentId: string,
+  _previousState: ContentActionState,
+  formData: FormData,
+): Promise<ContentActionState> {
+  if (!isValidContentId(referenceDocumentId)) {
+    return errorState("올바르지 않은 참조 노드 요청입니다.");
+  }
+  const parsed = parseReferenceCreateInput(formData);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "참조 대상을 확인해 주세요.",
+      fieldErrors: parsed.fieldErrors,
+    };
+  }
+  if (!isDatabaseConfigured()) return databaseErrorState();
+
+  try {
+    const result = await updateReferenceDocumentTarget(
+      referenceDocumentId,
+      parsed.data.targetDocumentId,
+    );
+    if (!result) {
+      return errorState("현재 경로에서 참조할 수 있는 대상을 찾지 못했습니다.");
+    }
+
+    revalidatePath("/");
+    revalidatePath(`/documents/${referenceDocumentId}`);
+    revalidatePath(`/documents/${parsed.data.targetDocumentId}`);
+    if (result.previousTargetDocumentId) {
+      revalidatePath(`/documents/${result.previousTargetDocumentId}`);
+    }
+    return { status: "success", message: "참조 대상을 변경했습니다." };
+  } catch (error) {
+    console.error("Reference target update failed", error);
+    return errorState("참조 대상을 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+}
+
+export async function deleteReferenceDocument(
+  referenceDocumentId: string,
+  _previousState: ContentActionState,
+  _formData: FormData,
+): Promise<ContentActionState> {
+  void _previousState;
+  void _formData;
+  if (!isValidContentId(referenceDocumentId)) {
+    return errorState("올바르지 않은 참조 노드 요청입니다.");
+  }
+  if (!isDatabaseConfigured()) return databaseErrorState();
+
+  let deleted:
+    | Awaited<ReturnType<typeof deleteReferenceDocumentById>>
+    | null = null;
+  try {
+    deleted = await deleteReferenceDocumentById(referenceDocumentId);
+  } catch (error) {
+    console.error("Reference document deletion failed", error);
+    return errorState("참조 노드를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+  }
+
+  if (deleted.status === "not-found") {
+    return errorState("삭제할 수 있는 참조 노드를 찾을 수 없습니다.");
+  }
+  if (deleted.status === "has-children") {
+    return errorState("하위 구성 요소가 있는 참조 노드는 삭제할 수 없습니다.");
+  }
+  if (deleted.status === "has-incoming-reference") {
+    return errorState("다른 노드가 참조하고 있어 삭제할 수 없습니다.");
+  }
+
+  revalidatePath("/");
+  if (deleted.parentId) revalidatePath(`/documents/${deleted.parentId}`);
+  if (deleted.targetDocumentId) {
+    revalidatePath(`/documents/${deleted.targetDocumentId}`);
+  }
+  redirect(deleted.parentId ? `/documents/${deleted.parentId}` : "/");
 }
 
 export async function moveDocument(

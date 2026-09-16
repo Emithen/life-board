@@ -4,9 +4,11 @@ import {
   TAG_NAME_MAX_LENGTH,
   TOPIC_DESCRIPTION_MAX_LENGTH,
   TOPIC_NAME_MAX_LENGTH,
+  isNodeType,
   isTagColor,
   isTopicColor,
   type ContentFieldErrors,
+  type NodeType,
   type TagColor,
   type TopicColor,
 } from "./model";
@@ -120,5 +122,64 @@ export function parseDocumentInput(formData: FormData) {
   return {
     success: true as const,
     data: { title, content: content || null },
+  };
+}
+
+export function parseDocumentCreateInput(formData: FormData) {
+  const parsedDocument = parseDocumentInput(formData);
+  const nodeTypeValue = getString(formData, "nodeType");
+  const fieldErrors: ContentFieldErrors = parsedDocument.success
+    ? {}
+    : { ...parsedDocument.fieldErrors };
+
+  if (!isNodeType(nodeTypeValue) || nodeTypeValue === "reference") {
+    fieldErrors.nodeType = "구조 또는 개념 유형을 선택해 주세요.";
+  }
+
+  if (!parsedDocument.success || Object.keys(fieldErrors).length > 0) {
+    return { success: false as const, fieldErrors };
+  }
+
+  return {
+    success: true as const,
+    data: {
+      ...parsedDocument.data,
+      nodeType: nodeTypeValue as Exclude<NodeType, "reference">,
+    },
+  };
+}
+
+export function parseEditableNodeTypeInput(formData: FormData) {
+  const nodeTypeValue = getString(formData, "nodeType");
+  const fieldErrors: ContentFieldErrors = {};
+
+  if (!isNodeType(nodeTypeValue) || nodeTypeValue === "reference") {
+    fieldErrors.nodeType = "구조 또는 개념 유형을 선택해 주세요.";
+    return { success: false as const, fieldErrors };
+  }
+
+  return {
+    success: true as const,
+    data: {
+      nodeType: nodeTypeValue as Exclude<NodeType, "reference">,
+    },
+  };
+}
+
+export function parseReferenceCreateInput(formData: FormData) {
+  const targetDocumentId = getString(formData, "targetDocumentId");
+  const fieldErrors: ContentFieldErrors = {};
+
+  if (!isValidContentId(targetDocumentId)) {
+    fieldErrors.targetDocumentId = "참조할 구조 또는 개념 노드를 선택해 주세요.";
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { success: false as const, fieldErrors };
+  }
+
+  return {
+    success: true as const,
+    data: { targetDocumentId },
   };
 }

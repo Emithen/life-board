@@ -6,6 +6,7 @@ import { FilePlus2, LoaderCircle, X } from "lucide-react";
 import { initialContentActionState } from "@/features/content/model";
 import { createRootDocument } from "./content-actions";
 import { DocumentFields } from "./document-fields";
+import { NodeTypeFields } from "./node-type-fields";
 
 export function NewDocumentForm({ configured }: { configured: boolean }) {
   const [state, action, pending] = useActionState(
@@ -19,6 +20,10 @@ export function NewDocumentForm({ configured }: { configured: boolean }) {
       aria-busy={pending}
       className="grid gap-5 border border-neutral-200 bg-white p-5 sm:p-6"
     >
+      <NodeTypeFields
+        idPrefix="create-document"
+        error={state.fieldErrors?.nodeType}
+      />
       <DocumentFields idPrefix="create-document" errors={state.fieldErrors} />
       {state.message ? (
         <p aria-live="polite" className="text-sm text-red-700">
