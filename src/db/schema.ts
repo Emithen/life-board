@@ -15,6 +15,7 @@ import { sql } from "drizzle-orm";
 import {
   DOCUMENT_CONTENT_MAX_LENGTH,
   DOCUMENT_TITLE_MAX_LENGTH,
+  NODE_TYPES,
   TAG_COLORS,
   TAG_NAME_MAX_LENGTH,
   TOPIC_DESCRIPTION_MAX_LENGTH,
@@ -32,6 +33,7 @@ export const todoStatus = pgEnum("todo_status", [
 ]);
 
 export const tagColor = pgEnum("tag_color", TAG_COLORS);
+export const documentNodeType = pgEnum("document_node_type", NODE_TYPES);
 
 export const todos = pgTable(
   "todos",
@@ -105,6 +107,7 @@ export const documents = pgTable(
       .references(() => topics.id),
     parentId: uuid("parent_id").references((): AnyPgColumn => documents.id),
     legacyTopicId: uuid("legacy_topic_id").references(() => topics.id),
+    nodeType: documentNodeType("node_type").notNull().default("structure"),
     title: text("title").notNull(),
     content: text("content"),
     accentColor: text("accent_color"),

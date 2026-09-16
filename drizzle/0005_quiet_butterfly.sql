@@ -1,0 +1,2 @@
+CREATE TYPE "public"."document_node_type" AS ENUM('structure', 'concept', 'reference');--> statement-breakpoint
+ALTER TABLE "documents" ADD COLUMN "node_type" "document_node_type" DEFAULT 'structure' NOT NULL;

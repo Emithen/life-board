@@ -1,6 +1,9 @@
+import type { NodeType } from "./model";
+
 export type DocumentNode = {
   id: string;
   parentId: string | null;
+  nodeType: NodeType;
   title: string;
   archivedAt: Date | null;
   updatedAt: Date;

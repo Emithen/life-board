@@ -109,6 +109,7 @@ export default async function DocumentPage({
             accentColor: document.accentColor,
             updatedAt: dateFormatter.format(document.updatedAt),
             parentId: document.parentId,
+            nodeType: document.nodeType,
           }}
           moveDestinations={moveDestinations}
           tags={tags}
@@ -130,6 +131,7 @@ export default async function DocumentPage({
                 updatedAt: dateFormatter.format(child.updatedAt),
                 archived: archived || child.archivedAt !== null,
                 childCount: child.childCount,
+                nodeType: child.nodeType,
                 tags: child.tags,
               }))}
             />

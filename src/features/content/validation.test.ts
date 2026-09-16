@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { isNodeType } from "./model";
 import { parseDocumentInput, parseTagInput, parseTopicInput } from "./validation";
 
 function formData(values: Record<string, string>) {
@@ -66,4 +67,11 @@ test("지원하지 않는 태그 색상을 거부한다", () => {
   const result = parseTagInput(formData({ name: "포화", color: "orange" }));
   assert.equal(result.success, false);
   if (!result.success) assert.ok(result.fieldErrors.color);
+});
+
+test("지원하는 노드 유형만 식별한다", () => {
+  assert.equal(isNodeType("structure"), true);
+  assert.equal(isNodeType("concept"), true);
+  assert.equal(isNodeType("reference"), true);
+  assert.equal(isNodeType("document"), false);
 });

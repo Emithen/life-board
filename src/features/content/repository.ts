@@ -233,6 +233,7 @@ async function getEditableDocument(id: string) {
       .select({
         id: documents.id,
         parentId: documents.parentId,
+        nodeType: documents.nodeType,
         title: documents.title,
         archivedAt: documents.archivedAt,
         updatedAt: documents.updatedAt,
@@ -360,6 +361,7 @@ export async function moveDocumentInTreeById(
     .select({
       id: documents.id,
       parentId: documents.parentId,
+      nodeType: documents.nodeType,
       title: documents.title,
       archivedAt: documents.archivedAt,
       updatedAt: documents.updatedAt,

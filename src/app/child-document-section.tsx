@@ -9,9 +9,13 @@ import {
   LoaderCircle,
   X,
 } from "lucide-react";
-import { initialContentActionState } from "@/features/content/model";
+import {
+  initialContentActionState,
+  type NodeType,
+} from "@/features/content/model";
 import { createChildDocument } from "./content-actions";
 import { DocumentFields } from "./document-fields";
+import { NodeTypeBadge } from "./node-type-badge";
 import { TagBadge, type DocumentTag } from "./tag-badge";
 
 type ChildDocument = {
@@ -20,6 +24,7 @@ type ChildDocument = {
   updatedAt: string;
   archived: boolean;
   childCount: number;
+  nodeType: NodeType;
   tags: DocumentTag[];
 };
 
@@ -134,6 +139,7 @@ export function ChildDocumentSection({
               >
                 <span className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="break-words font-medium">{item.title}</span>
+                  <NodeTypeBadge nodeType={item.nodeType} />
                   {item.tags.slice(0, 3).map((tag) => <TagBadge key={tag.id} tag={tag} />)}
                   {item.tags.length > 3 ? <span className="text-xs text-neutral-400">+{item.tags.length - 3}</span> : null}
                 </span>

@@ -2,10 +2,14 @@
 
 import { useActionState, useState } from "react";
 import { FolderInput, LoaderCircle, Pencil, X } from "lucide-react";
-import { initialContentActionState } from "@/features/content/model";
+import {
+  initialContentActionState,
+  type NodeType,
+} from "@/features/content/model";
 import { moveDocument, updateDocumentFromDetail } from "./content-actions";
 import { DocumentFields } from "./document-fields";
 import { DocumentMarkdown } from "./document-markdown";
+import { NodeTypeBadge } from "./node-type-badge";
 import { TagBadge, type DocumentTag } from "./tag-badge";
 import styles from "./document-markdown.module.css";
 
@@ -17,6 +21,7 @@ type DocumentEditorProps = {
     accentColor: string | null;
     updatedAt: string;
     parentId: string | null;
+    nodeType: NodeType;
   };
   moveDestinations: { id: string; pathLabel: string }[];
   tags: DocumentTag[];
@@ -54,6 +59,7 @@ export function DocumentEditor({
               <h1 className="break-words text-3xl font-semibold sm:text-4xl">
                 {document.title}
               </h1>
+              <NodeTypeBadge nodeType={document.nodeType} />
               {tags.map((tag) => <TagBadge key={tag.id} tag={tag} />)}
             </div>
             <p className="mt-3 text-xs text-neutral-500">

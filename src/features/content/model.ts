@@ -22,8 +22,11 @@ export const TAG_COLORS = [
   "violet",
 ] as const;
 
+export const NODE_TYPES = ["structure", "concept", "reference"] as const;
+
 export type TopicColor = (typeof TOPIC_COLORS)[number];
 export type TagColor = (typeof TAG_COLORS)[number];
+export type NodeType = (typeof NODE_TYPES)[number];
 export type ContentFieldErrors = Partial<
   Record<"name" | "description" | "color" | "title" | "content", string>
 >;
@@ -56,4 +59,8 @@ export function isTopicColor(value: string): value is TopicColor {
 
 export function isTagColor(value: string): value is TagColor {
   return TAG_COLORS.includes(value as TagColor);
+}
+
+export function isNodeType(value: string): value is NodeType {
+  return NODE_TYPES.includes(value as NodeType);
 }

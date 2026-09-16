@@ -19,6 +19,7 @@ function node(
   return {
     id,
     parentId,
+    nodeType: "structure",
     title: id,
     archivedAt: archived ? new Date("2026-01-10") : null,
     updatedAt: new Date(`2026-01-${String(updatedDay).padStart(2, "0")}`),

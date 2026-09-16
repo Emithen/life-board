@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, FilePlus2, FileText, LibraryBig } from "lucide-react";
 import { listRootDocuments } from "@/features/content/read-repository";
+import { NodeTypeBadge } from "./node-type-badge";
 import { TagBadge } from "./tag-badge";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +49,10 @@ export default async function DocumentsPage() {
                   <div className="h-1.5 w-12 bg-emerald-700" style={root.accentColor ? { backgroundColor: root.accentColor } : undefined} />
                   <div className="mt-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h2 className="break-words text-xl font-semibold group-hover:text-emerald-700">{root.title}</h2>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="break-words text-xl font-semibold group-hover:text-emerald-700">{root.title}</h2>
+                        <NodeTypeBadge nodeType={root.nodeType} />
+                      </div>
                       {tags.length > 0 ? (
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {tags.slice(0, 3).map((tag) => <TagBadge key={tag.id} tag={tag} />)}
