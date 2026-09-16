@@ -16,6 +16,19 @@ test("문서 Markdown의 제목, 목록, GFM 체크박스를 렌더링한다", (
   assert.match(html, /type="checkbox"/);
 });
 
+test("문단과 인라인 서식 안의 단일 개행을 줄바꿈으로 렌더링한다", () => {
+  const html = renderToStaticMarkup(
+    createElement(DocumentMarkdown, {
+      content: "첫째 줄\n둘째 **강조 줄**\n[셋째 링크](https://example.com)",
+    }),
+  );
+
+  assert.match(
+    html,
+    /<p>첫째 줄<br\/>\n둘째 <strong>강조 줄<\/strong><br\/>\n<a href="https:\/\/example\.com">셋째 링크<\/a><\/p>/,
+  );
+});
+
 test("본문의 HTML과 위험한 링크를 실행 가능한 요소로 만들지 않는다", () => {
   const html = renderToStaticMarkup(
     createElement(DocumentMarkdown, {
